@@ -1,0 +1,39 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Cuentas_participes {
+  id                      Int       @id @default(autoincrement())
+  creator_id              String
+  nombre_del_proyecto     String
+  descripcion             String
+  cantidad_recaudar_euros Float
+  aportacion_minima_euros Float
+  cantidad_restante       Float
+  cesion                  Boolean
+  duracion                DateTime
+  remuneracion            String
+  resultado               String
+  determinacion           String
+  juridicion              String
+  templateID              String
+  Compras                 Compras[]
+}
+
+model Compras {
+  id                 Int                @id @default(autoincrement())
+  user_id            String
+  metodo_de_pago     METODODEPAGO
+  participe_id       Int
+  Cuentas_participes Cuentas_participes @relation(fields: [participe_id], references: [id])
+}
+
+enum METODODEPAGO {
+  TARJETA
+  CRIPTO
+}
