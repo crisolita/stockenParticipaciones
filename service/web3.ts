@@ -9,10 +9,4 @@ export const wallet = new ethers.Wallet(process.env.ADMINPRIVATEKEY as string, p
 
 export default contract;
   
-export async function manageKeys(password: any) {
-  try {
-    console.log(password);
-  } catch (e) {
-    console.log(e);
-  }
-}
+

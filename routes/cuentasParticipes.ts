@@ -2,21 +2,18 @@ import express from "express";
 import { authenticateToken } from "../middleware/auth";
 import { isAdmin } from "../middleware/isAdmin";
 import Joivalidator from "express-joi-validation";
-import { querySchemaSetUserRol } from "../middleware/validation";
+import { comprarParticipacion, confirmarCreacionCuentaParticipe, crearCuentaParticipe, getTemplatesByPandaDoc } from "../controllers/cuentasParticipes";
+import { querySchemaCrearCuentaPartiipe } from "../middleware/validation";
 const validator = Joivalidator.createValidator();
 
 
 const router = express.Router();
-// RECUERDA PONER LOS VALIDADORES DE JOI
-// router.post("/setUserRol",validator.body(querySchemaSetUserRol) ,isAdmin, updateRolUser);
-// router.get("/getUsers",isAdmin,getAllUsers);
-
-// router.post("onboard-user/refresh",authenticateToken,onboardRefresh)
+router.post("/crearCuenta", validator.body(querySchemaCrearCuentaPartiipe),crearCuentaParticipe);
+router.post("/comprarCuentaParticipe",comprarParticipacion);
+router.post("/signCuenta",confirmarCreacionCuentaParticipe);
 
 
-
-
-
+router.get("/templates",getTemplatesByPandaDoc);
 
 
 export default router;
