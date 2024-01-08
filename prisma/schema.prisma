@@ -1354,9 +1354,11 @@ model cuentas_participes {
   juridicion          String
   templateID          String
   fecha_lanzamiento   DateTime
-  document_id         String
-  document_link       String
-  signed  Boolean?
+  companyIDSeller Int
+  liquidacion String
+  
+  clausulas   String?
+  mangopay_transfers mangopay_mangopaytransfer_cuenta_participe[]
   users_user          users_user     @relation(fields: [creator_id], references: [id])
   paticipacion        paticipacion[]
 }
@@ -1369,7 +1371,9 @@ model orders {
   cuenta_participe_id Int
   buyerID      Int?
   sellerID     Int
+  bloqueo_id  Int?
   status       StatusOrderCtaParticipe
+  companyIdBuyer Int?
   create_date  DateTime
   complete_at  DateTime?
   participacion_id Int?
@@ -1386,8 +1390,31 @@ model paticipacion {
   users_user         users_user         @relation(fields: [owner_id], references: [id])
   cuentas_participes cuentas_participes @relation(fields: [cuenta_participe_id], references: [id])
 }
-
+model mangopay_basemangopaytransaction_cuenta_participe {
+  id                               Int                               @id @default(autoincrement())
+  created                          DateTime                          @db.Timestamptz(6)
+  modified                         DateTime                          @db.Timestamptz(6)
+  transaction_id                   String                            @db.VarChar(32)
+  status                           String                            @db.VarChar(32)
+  amount                           Decimal                           @db.Decimal(20, 2)
+  currency                         String                            @db.VarChar(3)
+  fees                             Decimal                           @db.Decimal(20, 2)
+  cod                              String                            @db.VarChar(30)
+  mangopay_mangopaytransfer_cuenta_participe  mangopay_mangopaytransfer_cuenta_participe?
+}
+model mangopay_mangopaytransfer_cuenta_participe {
+  from_user_id                                                  Int
+  to_user_id                                                    Int
+  basemangopaytransaction_ptr_id                                Int                              @id
+  from_cod                                                      String?                          @db.VarChar(255)
+  to_cod                                                        String?                          @db.VarChar(255)
+  total_amount                                                  Decimal?                         @db.Decimal(20, 2)
+  cuenta_participe_id Int
+  cuenta_participe cuentas_participes @relation(fields:[cuenta_participe_id],references: [id])
+  mangopay_basemangopaytransaction_cuenta_participe             mangopay_basemangopaytransaction_cuenta_participe @relation(fields: [basemangopaytransaction_ptr_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "mangopay_mangopaytra_basemangopaytransact_d76323ba_fk_mangopay_")
+}
 enum StatusOrderCtaParticipe {
+  VENTA_ACTIVA
   SALDO_BLOQUEADO
   PENDIENTE_FIRMA_VENDEDOR
   PENDIENTE_FIRMA_COMPRADOR

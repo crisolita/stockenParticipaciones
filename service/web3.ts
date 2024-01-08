@@ -8,5 +8,9 @@ const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
 export const wallet = new ethers.Wallet(process.env.ADMINPRIVATEKEY as string, provider);
 
 export default contract;
+
+export const uploadBlockchain= async (idDocument:string,hashDocument:string,categoria:number,tipo:number,userId:number) =>{
+const createDocument= await contract.connect(wallet).createNewDocumento(userId, hashDocument,  idDocument, categoria, tipo)
+}
   
 
