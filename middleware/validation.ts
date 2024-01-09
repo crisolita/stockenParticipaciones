@@ -16,4 +16,5 @@ export const querySchemaCrearCuentaPartiipe = Joi.object({
   templateID: Joi.string().required(),
   fecha_lanzamiento: Joi.string().required(),
   liquidacion: Joi.string().required(),
+  Clausulas: Joi.string(),
 });

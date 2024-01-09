@@ -1269,7 +1269,7 @@ model users_user {
   users_user_groups                                                            users_user_groups[]
   users_user_user_permissions                                                  users_user_user_permissions[]
   cuentas_participes                                                           cuentas_participes[]
-  paticipacion                                                                 paticipacion[]
+  participacion                                                                 participacion[]
 
   @@index([cod], map: "users_user_cod_7b7c3ebf")
   @@index([cod], map: "users_user_cod_7b7c3ebf_like")
@@ -1360,7 +1360,7 @@ model cuentas_participes {
   clausulas   String?
   mangopay_transfers mangopay_mangopaytransfer_cuenta_participe[]
   users_user          users_user     @relation(fields: [creator_id], references: [id])
-  paticipacion        paticipacion[]
+  paticipacion        participacion[]
 }
 
 model orders {
@@ -1373,13 +1373,14 @@ model orders {
   sellerID     Int
   bloqueo_id  Int?
   status       StatusOrderCtaParticipe
+  templateID   String?
   companyIdBuyer Int?
   create_date  DateTime
   complete_at  DateTime?
   participacion_id Int?
 }
 
-model paticipacion {
+model participacion {
   id                 Int                @id @default(autoincrement())
   cuenta_participe_id       Int
   cantidad           Int
@@ -1387,6 +1388,8 @@ model paticipacion {
   document_id        String
   document_link      String
   owner_id           Int
+  buy_date DateTime
+  records record_participaciones[]
   users_user         users_user         @relation(fields: [owner_id], references: [id])
   cuentas_participes cuentas_participes @relation(fields: [cuenta_participe_id], references: [id])
 }
@@ -1412,6 +1415,18 @@ model mangopay_mangopaytransfer_cuenta_participe {
   cuenta_participe_id Int
   cuenta_participe cuentas_participes @relation(fields:[cuenta_participe_id],references: [id])
   mangopay_basemangopaytransaction_cuenta_participe             mangopay_basemangopaytransaction_cuenta_participe @relation(fields: [basemangopaytransaction_ptr_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "mangopay_mangopaytra_basemangopaytransact_d76323ba_fk_mangopay_")
+}
+
+model record_participaciones {
+  id                 Int                @id @default(autoincrement())
+  participacion_id       Int
+  cantidad           Int
+  monto_pagado       Int
+  old_document_id        String
+  old_document_link      String
+  old_owner_id           Int
+  change_date DateTime
+  participacion participacion @relation(fields:[participacion_id],references: [id])
 }
 enum StatusOrderCtaParticipe {
   VENTA_ACTIVA

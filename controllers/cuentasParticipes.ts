@@ -1,6 +1,10 @@
 import { PrismaClient } from "@prisma/client";
 import { Request, Response, response } from "express";
-import { crearDocumentoDeCompra, getTemplates } from "../service/pandadoc";
+import {
+  crearDocumentoDeCompra,
+  crearDocumentoDeCompraDeParticipacion,
+  getTemplates,
+} from "../service/pandadoc";
 import axios from "axios";
 import mangopayInstance from "mangopay2-nodejs-sdk";
 const mangopay = new mangopayInstance({
@@ -264,10 +268,10 @@ export const crearVentaDeParticipacion = async (
 
     const { participacion_id, jwtUser, precio } = req.body;
 
-    let participacion = await prisma.paticipacion.findUnique({
+    let participacion = await prisma.participacion.findUnique({
       where: { id: participacion_id },
     });
-
+    /// VALIDACION DEL CESION
     if (!participacion)
       return res.status(400).json({ error: "No existe cuenta participe" });
     //create bloqueo mangopay user
@@ -382,26 +386,40 @@ export const comprarParticipacionPorOrden = async (
     if (funds.data.funds < order.precio_total)
       return res.status(400).json({ error: "Fondo insuficiente" });
     // /bloquear saldo
-    /// TRANSFERENCIA DE MANGOPAY DE UN USUARIO A OTRO
+    /// bloqueo de mangopay
+
+    try {
+      const seller = await prisma.users_user.findUnique({
+        where: { id: order.sellerID },
+      });
+      const bloqueoSaldo = await axios.post(
+        "https://pro.stockencapital.com/api/v1/moneyblocks/create_money_block/",
+        {
+          blocked_amount: order.precio_total,
+          user_cod: user.data.cod,
+          company_cod: seller?.cod,
+          status: "PROCESSING",
+        },
+        {
+          headers: {
+            Authorization: `${jwtUser}`,
+          },
+        }
+      );
+    } catch (e) {
+      console.log(e);
+      res.status(400).json({ error: "Error al bloquear saldo" });
+    }
+
     order = await prisma.orders.update({
       where: { id: order.id },
       data: {
         buyerID: user.data.id,
-        status: "PENDIENTE_FIRMA_COMPRADOR",
-        complete_at: new Date(),
+        status: "SALDO_BLOQUEADO",
       },
     });
-    if (!order.participacion_id)
-      return res
-        .status(404)
-        .json({ error: "Orden sin participacion asignada" });
 
-    let participacion = await prisma.paticipacion.update({
-      where: { id: order.participacion_id },
-      data: { owner_id: user.data.id },
-    });
-
-    return res.json({ participacion, order });
+    return res.json(order);
   } catch (e) {
     console.log(e);
     res.status(500).json(e);
@@ -476,6 +494,7 @@ export const verOrdenesByBuyer = async (req: Request, res: Response) => {
     if (!user || user.data.status != "validated")
       return res.status(400).json({ error: "Usuario no valido" });
 
+    /// ORDENES RECHAZADAS
     const saldoBloqueado = await prisma.orders.findMany({
       where: { buyerID: user.data.id, status: "SALDO_BLOQUEADO" },
     });
@@ -491,7 +510,10 @@ export const verOrdenesByBuyer = async (req: Request, res: Response) => {
     res.status(500).json(e);
   }
 };
-export const aceptarCompras = async (req: Request, res: Response) => {
+export const aceptarComprasCuentaParticipe = async (
+  req: Request,
+  res: Response
+) => {
   try {
     // @ts-ignore
     const prisma = req.prisma as PrismaClient;
@@ -709,6 +731,208 @@ export const aceptarCompras = async (req: Request, res: Response) => {
     res.status(500).json(e);
   }
 };
+export const aceptarCompraParticipacion = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    // @ts-ignore
+    const prisma = req.prisma as PrismaClient;
+    const { jwtCreador, orderId } = req.body;
+    let user;
+    try {
+      user = await axios.get(
+        "https://pro.stockencapital.com/api/v1/users/me/",
+        {
+          headers: {
+            Authorization: `${jwtCreador}`,
+          },
+        }
+      );
+    } catch (e) {
+      console.log(e);
+
+      return res.status(400).json(e);
+    }
+    if (!user || user.data.status != "validated")
+      return res.status(400).json({ error: "Usuario no valido" });
+    let order = await prisma.orders.findUnique({
+      where: { id: orderId, status: "SALDO_BLOQUEADO" },
+    });
+    if (!order || order.sellerID != user.data.id || !order.buyerID)
+      return res.status(400).json({ error: "Orden no encontrada" });
+    const cuenta = await prisma.cuentas_participes.findUnique({
+      where: { id: order.cuenta_participe_id },
+    });
+
+    if (!order?.templateID)
+      return res.status(404).json({ error: "No hay template" });
+    const buyer = await prisma.users_user.findUnique({
+      where: { id: order.buyerID },
+    });
+
+    if (!buyer) return res.status(400).json({ error: "Comprador no valido" });
+    let desbloqueoSaldo;
+    // / DESBLOQUEAR SALDO MANGOPAY Y ENVIARSELO A VENDEDOR
+
+    try {
+      desbloqueoSaldo = await axios.patch(
+        "https://pro.stockencapital.com/api/v1/moneyblocks/update_money_block_status/",
+        {
+          id: order.bloqueo_id,
+          status: "EXECUTED",
+        },
+        {
+          headers: {
+            Authorization: `${jwtCreador}`,
+          },
+        }
+      );
+    } catch (e) {
+      console.log(e);
+      return res.status(500).json(e);
+    }
+    /// transferencia de mangopay de buyer a seller
+    let mangopayIdBuyer,
+      mangopayIdSeller,
+      mangopayWalletBuyer,
+      mangopayWalletSeller;
+    mangopayIdSeller = (
+      await prisma.mangopay_mangopayuser.findFirst({
+        where: { cod: user.data.cod },
+      })
+    )?.mangopay_id;
+    mangopayWalletSeller = (
+      await prisma.mangopay_mangopaywallet.findFirst({
+        where: { cod: user.data.cod },
+      })
+    )?.wallet_id;
+
+    if (!buyer.cod)
+      return res.status(400).json({ error: "Cod no asignado al usuario" });
+    mangopayIdBuyer = (
+      await prisma.mangopay_mangopayuser.findFirst({
+        where: { cod: buyer.cod },
+      })
+    )?.mangopay_id;
+    mangopayWalletBuyer = (
+      await prisma.mangopay_mangopaywallet.findFirst({
+        where: { cod: buyer.cod },
+      })
+    )?.wallet_id;
+
+    console.log(
+      mangopayIdBuyer,
+      "ID  buyer",
+      mangopayIdSeller,
+      "ID seller",
+      mangopayWalletBuyer,
+      "wallet buyer",
+      mangopayWalletSeller,
+      "wallet seller"
+    );
+    let myTransfer = {
+      AuthorId: mangopayIdBuyer,
+      Tag: "Created using Mangopay NodeJS SDK",
+      CreditedUserId: mangopayIdSeller,
+      DebitedFunds: {
+        Currency: "EUR",
+        Amount: order.precio_total,
+      },
+      Fees: {
+        Currency: "EUR",
+        Amount: 0,
+      },
+      DebitedWalletId: mangopayWalletBuyer,
+      CreditedWalletId: mangopayWalletSeller,
+    };
+
+    const createTransfer = async (
+      myTransfer: mangopayInstance.transfer.CreateTransfer
+    ) => {
+      try {
+        const response = await mangopay.Transfers.create(myTransfer);
+        console.log(response);
+        return response;
+      } catch (err) {
+        console.log(err);
+        return false;
+      }
+    };
+    try {
+      //@ts-ignore
+      const transferResponse = await createTransfer(myTransfer);
+      if (!transferResponse || transferResponse.Status != "SUCCEEDED")
+        return res.status(400).json({ error: "Transferencia ha fallado" });
+      /// crear yun modelo para este registro aparte
+      // const transaction = await prisma.mangopay_basemangopaytransaction.create({
+      //   data: {
+      //     created: new Date(transferResponse.CreationDate),
+      //     modified: new Date(transferResponse.ExecutionDate),
+      //     transaction_id: transferResponse.Id,
+      //     status: transferResponse.Status,
+      //     amount: transferResponse.DebitedFunds.Amount,
+      //     currency: transferResponse.DebitedFunds.Currency,
+      //     fees: transferResponse.Fees.Amount,
+      //     cod: transferResponse.ResultCode,
+      //   },
+      // });
+      // await prisma.mangopay_mangopaytransfer_cuenta_participe.create({
+      //   data: {
+      //     from_user_id: buyer.id,
+      //     to_user_id: user.data.id,
+      //     basemangopaytransaction_ptr_id: transaction.id,
+      //     from_cod: buyer.cod,
+      //     to_cod: company.cod,
+      //     total_amount: transaction.amount,
+      //     cuenta_participe_id: cuenta.id,
+      //   },
+      // });
+    } catch (e) {
+      console.log(e);
+      return res.status(500).json(e);
+    }
+    try {
+      if (!order.participacion_id)
+        return res
+          .status(404)
+          .json({ error: "Participacion id no encontrada" });
+      const participacion = await prisma.participacion.findUnique({
+        where: { id: order.participacion_id },
+      });
+      if (!participacion)
+        return res.status(404).json({ error: "Participacion no encontrada" });
+      const document = await crearDocumentoDeCompraDeParticipacion(
+        order,
+        participacion?.buy_date,
+        buyer,
+        user.data,
+        order.templateID,
+        prisma
+      );
+      console.log("doc", document);
+      if (!document || !document.link)
+        return res.status(500).json({ error: "Error al crear documento" });
+      // guardar particpacion en historial y asignar a nuevo comprador
+      order = await prisma.orders.update({
+        where: { id: order.id },
+        data: {
+          url_sign: document.link,
+          complete_at: new Date(),
+          status: "PENDIENTE_FIRMA_VENDEDOR",
+        },
+      });
+    } catch (e) {
+      console.log(e);
+      return res.status(400).json(e);
+    }
+
+    res.json(order);
+  } catch (e) {
+    console.log(e);
+    res.status(500).json(e);
+  }
+};
 // export const signCompraDoc = async (req: Request, res: Response) => {
 //   try {
 //     // @ts-ignore
@@ -819,7 +1043,10 @@ export const aceptarCompras = async (req: Request, res: Response) => {
 //   document_link:document.link,
 //   owner_id:order.buyerID
 // }})
-export const rechazarCompras = async (req: Request, res: Response) => {
+export const rechazarComprasCuentaParticipe = async (
+  req: Request,
+  res: Response
+) => {
   try {
     // @ts-ignore
     const prisma = req.prisma as PrismaClient;
@@ -885,6 +1112,54 @@ export const rechazarCompras = async (req: Request, res: Response) => {
   }
 };
 
+export const rechazarCompraParticipacion = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    // @ts-ignore
+    const prisma = req.prisma as PrismaClient;
+    const { jwtCreador, orderId } = req.body;
+    const user = await axios.get(
+      "https://pro.stockencapital.com/api/v1/users/me/",
+      {
+        headers: {
+          Authorization: `${jwtCreador}`,
+        },
+      }
+    );
+    if (!user || user.data.status != "validated")
+      return res.status(400).json({ error: "Usuario no valido" });
+
+    let order = await prisma.orders.findUnique({
+      where: { id: orderId, status: "SALDO_BLOQUEADO" },
+    });
+    if (!order || order.sellerID != user.data.id || !order.buyerID)
+      return res.status(400).json({ error: "Orden no encontrada" });
+
+    /// DESBLOQUEAR SALDO MANGOPAY
+    const desbloqueoSaldo = await axios.patch(
+      "https://pro.stockencapital.com/api/v1/moneyblocks/update_money_block_status/",
+      {
+        id: order.bloqueo_id,
+        status: "DEACTIVATED",
+      },
+      {
+        headers: {
+          Authorization: `${jwtCreador}`,
+        },
+      }
+    );
+    order = await prisma.orders.update({
+      where: { id: order.id },
+      data: { complete_at: new Date(), status: "RECHAZADA" },
+    });
+    res.json(order);
+  } catch (e) {
+    console.log(e);
+    res.status(500).json(e);
+  }
+};
 ///Faltaria endpoints de reventa si se permite cesion
 
 export const getTemplatesByPandaDoc = async (req: Request, res: Response) => {

@@ -4,6 +4,7 @@ import {
   companies_company,
   cuentas_participes,
   orders,
+  participacion,
   users_user,
 } from "@prisma/client";
 // replace it with your API key
@@ -87,7 +88,6 @@ export const textoSociedad = (
   Se halla representada en este acto por ${legal_representative}, quien actúa en su condición de ${cargo} en virtud de la escritura de apoderamiento otorgada el ${dia_apoderamiento} de ${mes_apoderamiento} de ${ano_apoderamiento} ante el Notario de ${ciudad_notario_lr} Don ${fullname_notario_lr}, bajo el número ${n_protocolo_lr} de su protocolo.`;
 };
 export const defaultClausula = (
-  participacion_aporte: string,
   cuenta_descripcion_resultado_calculo: string,
   cuenta_descripcion_liquidacion_pago: string,
   cuenta_determinacion_resultado: string,
@@ -99,14 +99,7 @@ export const defaultClausula = (
   CLÁUSULAS
   OBJETO.
   Este Contrato tiene por objeto regular los términos y condiciones de la participación del Cuentapartícipe en los resultados económicos, ya sean, beneficios o pérdidas, derivados del Proyecto; que será desarrollada por el Gestor bajo la forma jurídica de un contrato de cuentas en participación. 
-  Las Partes declaran expresamente que las relaciones que se deriven del presente Contrato serán las propias de un gestor (para el Gestor) y de un partícipe (para el Cuentapartícipe) dentro del marco jurídico de una cuenta en participación de naturaleza mercantil; siendo la voluntad de las Partes que la relación de cuentas en participación regulada mediante el presente Contrato carezca de personalidad jurídica propia, existiendo una relación obligatoria entre las Partes, y  siendo en cualquier caso el Gestor el único que ejercerá el Proyecto, que es de naturaleza mercantil, y quien llevará a cabo las distintas actuaciones con y frente a terceros. 
-   
-  APORTACIÓN DEL CUENTAPARTÍCIPE. 
-  En virtud del presente, el Cuentapartícipe se compromete a poner a disposición del Gestor, en concepto de aportación cuenta partícipe, un importe de
-  ${participacion_aporte} (en adelante, la “Aportación”). 
-   
-  La Aportación deberá resultar abonada mediante transferencia bancaria a la cuenta corriente abierta a nombre del Gestor en la entidad bancaria [*] con IBAN número [*] (SEGÚN EL FLUJO DE FUNCIONAMIENTO DEL CONTRATO SI ANTES DE LA FIRMA ASEGURAMOS LOS FONDOS LA REDACCIÓN CORRECTA DE ESTA CLÁUSULA SERÍA: “El Gestor manifesta haber recibido la Aportación a la fecha de suscripción del presente Contrato.” VALORAR SI PODEMOS AÑADIR ALGUNA CONFIRMACIÓN O JUSTIFICANTE QUE SE PUEDA ANEXAR PARA CONFIRMAR QUE SE HA HECHO, SI NO NO PASA NADA, EN EL LISTADO DE PAGOS PODEMOS TENER PRUEBA DE ELLO) . 
-    
+  Las Partes declaran expresamente que las relaciones que se deriven del presente Contrato serán las propias de un gestor (para el Gestor) y de un partícipe (para el Cuentapartícipe) dentro del marco jurídico de una cuenta en participación de naturaleza mercantil; siendo la voluntad de las Partes que la relación de cuentas en participación regulada mediante el presente Contrato carezca de personalidad jurídica propia, existiendo una relación obligatoria entre las Partes, y  siendo en cualquier caso el Gestor el único que ejercerá el Proyecto, que es de naturaleza mercantil, y quien llevará a cabo las distintas actuaciones con y frente a terceros.  
   PARTICIPACIÓN EN EL RESULTADO. 
   En contraprestación a su Aportación, el Cuentapartícipe, a su riesgo y ventura, junto con el Gestor, adquiere el derecho a participar en el resultado del Proyecto en el mismo porcentaje que representa la Aportación, esto es, en
   ${cuenta_descripcion_resultado_calculo} (los “Derechos Económicos”). 
@@ -397,12 +390,15 @@ export const crearDocumentoDeCompra = async (
           value: `${cuenta.descripcion}`,
         },
         {
+          name: "Client.aporte",
+          value: `${order.precio_total}`,
+        },
+        {
           name: "Clausulas",
           value: `${
             cuenta.clausulas
               ? cuenta.clausulas
               : defaultClausula(
-                  order.precio_total.toString(),
                   cuenta.resultado,
                   cuenta.liquidacion,
                   cuenta.determinacion,
@@ -411,6 +407,153 @@ export const crearDocumentoDeCompra = async (
                   cuenta.juridicion
                 )
           }`,
+        },
+      ],
+    };
+    const document = await apiInstanceDocuments.createDocument({
+      documentCreateRequest: documentCreateRequest,
+    });
+    if (document.id) {
+      const sure = await ensureSentDocument(document.id);
+      if (!sure) return undefined;
+      const sent = await apiInstanceDocuments.sendDocument({
+        id: String(document.id),
+        documentSendRequest: {
+          silent: false,
+          subject: "Contrato de venta pendiente por firmar",
+          message:
+            "Para continuar con el proceso de venta usted debe firmar el siguiente contrato",
+        },
+      });
+      console.log(sent);
+      const doc = await apiInstanceDocuments.detailsDocument({
+        id: document.id,
+      });
+      return {
+        id: document.id,
+        link: doc.recipients ? doc.recipients[0].sharedLink : undefined,
+      };
+    }
+  } catch (e) {
+    console.log(e);
+    return false;
+  }
+};
+export const crearDocumentoDeCompraDeParticipacion = async (
+  order: orders,
+  participacion_buy_date: Date,
+  buyer: users_user,
+  seller: users_user,
+  templateID: string,
+  prisma: PrismaClient
+) => {
+  let fiscalresidenceSeller, fiscalresidenceBuyer;
+  const cuenta = await prisma.cuentas_participes.findUnique({
+    where: { id: order.cuenta_participe_id },
+  });
+  fiscalresidenceSeller = await prisma.users_fiscalresidence.findFirst({
+    where: { user_id: seller.id },
+  });
+
+  fiscalresidenceBuyer = await prisma.users_fiscalresidence.findFirst({
+    where: { user_id: buyer.id },
+  });
+
+  try {
+    const documentCreateRequest: pd_api.DocumentCreateRequest = {
+      name: "Documento de Compra",
+      templateUuid: templateID,
+      tags: ["Esta es una Compra de una participacion a otro usuario"],
+      recipients: [
+        {
+          email: seller.email,
+          firstName: seller.first_name,
+          role: "Seller",
+          signingOrder: 1,
+        },
+        {
+          email: buyer.email,
+          firstName: buyer.first_name,
+          role: "Buyer",
+          signingOrder: 2,
+        },
+      ],
+      tokens: [
+        {
+          name: "Date",
+          value: `${new Date()}`,
+        },
+        {
+          name: "fecha_venta_anterior",
+          value: `${participacion_buy_date}`,
+        },
+        {
+          name: "Seller.FirstName",
+          value: seller.first_name,
+        },
+        {
+          name: "Seller.LastName",
+          value: seller.last_name,
+        },
+        {
+          name: "Seller.estado_civil",
+          value: seller.marital_status ? seller.marital_status : "",
+        },
+        {
+          name: "Seller.n_document_id",
+          value: seller.id_document_number ? seller.id_document_number : "",
+        },
+        {
+          name: "Seller.domicilio",
+          value: `${
+            (fiscalresidenceSeller?.country,
+            fiscalresidenceSeller?.city,
+            fiscalresidenceSeller?.state,
+            fiscalresidenceSeller?.street_address,
+            fiscalresidenceSeller?.postal_code)
+          }`,
+        },
+        {
+          name: "Seller.email",
+          value: seller.email,
+        },
+        {
+          name: "Buyer.FirstName",
+          value: buyer.first_name,
+        },
+        {
+          name: "Buyer.LastName",
+          value: buyer.last_name,
+        },
+        {
+          name: "Buyer.estado_civil",
+          value: buyer.marital_status ? buyer.marital_status : "",
+        },
+        {
+          name: "Buyer.n_document_id",
+          value: buyer.id_document_number ? buyer.id_document_number : "",
+        },
+        {
+          name: "Buyer.domicilio",
+          value: `${
+            (fiscalresidenceBuyer?.country,
+            fiscalresidenceBuyer?.city,
+            fiscalresidenceBuyer?.state,
+            fiscalresidenceBuyer?.street_address,
+            fiscalresidenceBuyer?.postal_code)
+          }`,
+        },
+        {
+          name: "Buyer.email",
+          value: buyer.email,
+        },
+        {
+          name: "cuenta_participe.descripcion",
+          value: cuenta?.descripcion ? cuenta.descripcion : "",
+        },
+        {
+          name: "precio",
+          value: `${order.precio_total}`,
         },
       ],
     };
