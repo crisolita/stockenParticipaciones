@@ -13,7 +13,7 @@ const API_KEY = process.env.SIGNATURITKEY;
 const client = new SignaturitClient(API_KEY);
 export const createSignature = async () => {
   try {
-    const document = await client.createDocument(
+    const document = await client.createSignature(
       "",
       { name: `user.first_name`, email: `crisolvalentina@gmail.com` },
       { templates: "#creacion" }

@@ -1135,10 +1135,10 @@ export const rechazarCompraParticipacion = async (
 export const getTemplatesByPandaDoc = async (req: Request, res: Response) => {
   try {
     console.log("hola");
-    const doc = await client.getTemplates();
+    // const doc = await client.getTemplates();
 
     const create = await createSignature();
-    res.json(doc);
+    res.json(create);
   } catch (e) {
     console.log(e);
     return res.status(500).json({ error: e });
