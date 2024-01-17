@@ -41,6 +41,7 @@
     "pandadoc-node-client": "^5.7.1",
     "prisma": "^5.1.0",
     "save": "^2.9.0",
+    "signaturit-sdk": "^1.0.0",
     "stripe": "^12.8.0"
   }
 }

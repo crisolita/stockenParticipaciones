@@ -188,6 +188,7 @@ export const crearDocumentoDeCompra = async (
   company: companies_company,
   prisma: PrismaClient
 ) => {
+  console.log("entres");
   let companyBuyer, fiscalresidence;
   if (order.companyIdBuyer) {
     companyBuyer = await prisma.companies_company.findUnique({
@@ -198,7 +199,11 @@ export const crearDocumentoDeCompra = async (
       where: { user_id: buyer.id },
     });
   }
+  console.log("entres  2");
+
   try {
+    console.log("entres 3");
+
     const documentCreateRequest: pd_api.DocumentCreateRequest = {
       name: "Documento de Compra",
       templateUuid: cuenta.templateID,
@@ -219,16 +224,8 @@ export const crearDocumentoDeCompra = async (
       ],
       tokens: [
         {
-          name: "Document.dia",
-          value: `${new Date().getDay()}`,
-        },
-        {
-          name: "Document.mes",
-          value: `${new Date().getMonth()}`,
-        },
-        {
-          name: "Document.ano",
-          value: `${new Date().getFullYear()}`,
+          name: "Document.Date",
+          value: `${new Date().toLocaleDateString()}`,
         },
         {
           name: "Empresa.name",

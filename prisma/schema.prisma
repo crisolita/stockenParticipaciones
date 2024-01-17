@@ -1270,7 +1270,7 @@ model users_user {
   users_user_user_permissions                                                  users_user_user_permissions[]
   cuentas_participes                                                           cuentas_participes[]
   participacion                                                                 participacion[]
-
+  nota_convertible nota_convertible[]
   @@index([cod], map: "users_user_cod_7b7c3ebf")
   @@index([cod], map: "users_user_cod_7b7c3ebf_like")
   @@index([email], map: "users_user_email_243f6e77_like")
@@ -1368,6 +1368,7 @@ model orders {
   precio_total Float
   cantidad     Int
   url_sign     String?
+  documentId  String?
   cuenta_participe_id Int
   buyerID      Int?
   sellerID     Int
@@ -1428,11 +1429,45 @@ model record_participaciones {
   change_date DateTime
   participacion participacion @relation(fields:[participacion_id],references: [id])
 }
+
+model venta_de_notas_convertibles {
+id                 Int                @id @default(autoincrement())
+cantidad_a_vender Int
+ticket_minimo     Float
+companyID Int
+interes_fijo Float?
+interes_variable Float?
+vence_date DateTime?
+vence_cantidad Int?
+tasa_descuento Float?
+capitulacion String?
+CAP_no_ronda String?
+floor String?
+fecha_devolucion DateTime?
+negociar Boolean
+}
+model nota_convertible {
+id                 Int                @id @default(autoincrement())
+valor Float
+companyID Int
+interes_fijo Float?
+interes_variable Float?
+vence_date DateTime?
+tasa_descuento Float?
+capitulacion Float?
+CAP_no_ronda Float?
+floor Float?
+fecha_devolucion DateTime?
+negociar Boolean
+user_id Int
+user users_user @relation(fields: [user_id], references: [id])
+}
+
+
 enum StatusOrderCtaParticipe {
   VENTA_ACTIVA
   SALDO_BLOQUEADO
-  PENDIENTE_FIRMA_VENDEDOR
-  PENDIENTE_FIRMA_COMPRADOR
+  PENDIENTE_FIRMA
   COMPRA_TERMINADA
   RECHAZADA
 }
