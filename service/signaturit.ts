@@ -14,7 +14,7 @@ const client = new SignaturitClient(API_KEY);
 export const createSignature = async () => {
   try {
     const document = await client.createSignature(
-      [""],
+      "Nota Convertible - Datos & Formulario.pdf",
       { name: `user.first_name`, email: `crisolvalentina@gmail.com` },
       { templates: "#creacion" }
     );
