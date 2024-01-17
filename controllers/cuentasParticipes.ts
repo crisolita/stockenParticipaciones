@@ -715,41 +715,41 @@ export const aceptarComprasCuentaParticipe = async (
     //     cuenta_participe_id: cuenta.id,
     //   },
     // });
+    // } catch (e) {
+    //   console.log(e);
+    //   return res.status(500).json(e);
+    // }
+    try {
+      console.log("Hola");
+      const document = await crearDocumentoDeCompra(
+        order,
+        cuenta,
+        buyer,
+        user.data,
+        company,
+        prisma
+      );
+      console.log("doc", document);
+      if (!document || !document.link)
+        return res.status(500).json({ error: "Error al crear documento" });
+      order = await prisma.orders.update({
+        where: { id: order.id },
+        data: {
+          url_sign: document.link,
+          complete_at: new Date(),
+          status: "PENDIENTE_FIRMA",
+        },
+      });
+    } catch (e) {
+      console.log(e);
+      return res.status(400).json(e);
+    }
+
+    //   res.json(order);
   } catch (e) {
     console.log(e);
-    return res.status(500).json(e);
+    res.status(500).json(e);
   }
-  // try {
-  //   console.log("Hola");
-  //   const document = await crearDocumentoDeCompra(
-  //     order,
-  //     cuenta,
-  //     buyer,
-  //     user.data,
-  //     company,
-  //     prisma
-  //   );
-  //   console.log("doc", document);
-  //   if (!document || !document.link)
-  //     return res.status(500).json({ error: "Error al crear documento" });
-  //   order = await prisma.orders.update({
-  //     where: { id: order.id },
-  //     data: {
-  //       url_sign: document.link,
-  //       complete_at: new Date(),
-  //       status: "PENDIENTE_FIRMA",
-  //     },
-  //   });
-  // } catch (e) {
-  //   console.log(e);
-  //   return res.status(400).json(e);
-  // }
-
-  //   res.json(order);
-  // } catch (e) {
-  //   console.log(e);
-  //   res.status(500).json(e);
-  // }
 };
 export const aceptarCompraParticipacion = async (
   req: Request,
@@ -1134,23 +1134,11 @@ export const rechazarCompraParticipacion = async (
 
 export const getTemplatesByPandaDoc = async (req: Request, res: Response) => {
   try {
-    // @ts-ignore
-    // const prisma = req.prisma as PrismaClient;
-    // const data = await getTemplates();
-    // console.log(data);
-    // return res.json(data.results);
-
     console.log("hola");
-    const doc = await client.createSignature(
-      [
-        "/Users/crisolcova/stockenCuentasParticipes/Nota Convertible - Datos & Formulario.pdf",
-      ],
-      { name: "John", email: "crisolvalentina@gmail.com" }
-    );
+    const doc = await client.getTemplates();
 
-    console.log(doc, "doc");
-    // const res = await client.getSignatures();
-    // console.log(res);
+    const create = await createSignature();
+    res.json(doc);
   } catch (e) {
     console.log(e);
     return res.status(500).json({ error: e });
