@@ -725,6 +725,7 @@ export const aceptarComprasCuentaParticipe = async (
         order,
         cuenta,
         buyer,
+        user.data,
         company,
         prisma
       );

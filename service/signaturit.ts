@@ -11,6 +11,7 @@ import {
 import fs from "fs";
 import mustache from "mustache";
 import pdf from "html-pdf";
+import { user } from "mangopay2-nodejs-sdk";
 
 // replace it with your API key
 const API_KEY = process.env.SIGNATURITKEY;
@@ -150,6 +151,7 @@ export const createSignature = async (
   order: orders,
   cuenta: cuentas_participes,
   buyer: users_user,
+  creador: users_user,
   company: companies_company,
   prisma: PrismaClient
 ) => {
@@ -261,11 +263,21 @@ export const createSignature = async (
         if (err) return console.log(err);
         console.log("PDF creado exitosamente en", res.filename);
       });
-    const document = await client.createSignature("crearCP.pdf", {
-      name: `user.first_name`,
-      email: `crisolvalentina@gmail.com`,
-      role: "Signer",
-    });
+    const document = await client.createSignature(
+      "crearCP.pdf",
+      {
+        name: buyer.first_name,
+        email: buyer.email,
+        role: "Signer 1",
+        delivery_type: "url",
+      },
+      {
+        name: creador.first_name,
+        email: creador.email,
+        role: "Signer 2",
+        delivery_type: "url",
+      }
+    );
     console.log(document);
     return document;
   } catch (e) {
