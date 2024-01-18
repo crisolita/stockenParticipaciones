@@ -1367,8 +1367,11 @@ model orders {
   id           Int                     @id @default(autoincrement())
   precio_total Float
   cantidad     Int
-  url_sign     String?
-  documentId  String?
+  url_sign_first     String?
+  url_sign_second    String?
+  documentId_first  String?
+  documentId_second  String?
+  signatureId String?
   cuenta_participe_id Int
   buyerID      Int?
   sellerID     Int
