@@ -16,7 +16,16 @@ export const createSignature = async () => {
     const document = await client.createSignature(
       "Nota Convertible - Datos & Formulario.pdf",
       { name: `user.first_name`, email: `crisolvalentina@gmail.com` },
-      { templates: "#creacion" }
+      {
+        templates: "#crear",
+        data: {
+          emp_nif: "827392",
+          emp_country: "ES",
+          emp_city: "Caracas",
+          emp_name: "Blockimpulse",
+          doc_date: new Date().toLocaleDateString(),
+        },
+      }
     );
     console.log(document);
     return document;
