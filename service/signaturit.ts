@@ -169,7 +169,7 @@ export const createSignature = async (
     }
     const data = {
       Document_date: new Date().toDateString(),
-      Empresa_name: `nosoy nadie`,
+      Empresa_name: company.social_denomination,
       Empresa_Country: company.country,
       Empresa_City: company.city,
       Empresa_address: company.street_address,
@@ -256,6 +256,7 @@ export const createSignature = async (
     console.log("llegue aqui");
     // Ajusta las opciones según tus necesidades
     const options = { format: "Letter" };
+    fs.writeFileSync("createCP.html", plantilla);
 
     pdf
       .create(plantilla)
@@ -263,8 +264,7 @@ export const createSignature = async (
         if (err) return console.log(err);
         console.log("PDF creado exitosamente en", res.filename);
       });
-    const document = await client.createSignature(
-      "crearCP.pdf",
+    const document = await client.createSignature("crearCP.pdf", [
       {
         name: creador.first_name,
         email: creador.email,
@@ -274,8 +274,8 @@ export const createSignature = async (
         name: buyer.first_name,
         email: buyer.email,
         role: "Signer 2",
-      }
-    );
+      },
+    ]);
     console.log(document);
     return document;
   } catch (e) {

@@ -730,8 +730,8 @@ export const aceptarComprasCuentaParticipe = async (
         prisma
       );
       console.log("doc", document);
-      // if (!document || !document.link)
-      //   return res.status(500).json({ error: "Error al crear documento" });
+      if (!document || !document.id)
+        return res.status(500).json({ error: "Error al crear documento" });
       // order = await prisma.orders.update({
       //   where: { id: order.id },
       //   data: {
