@@ -169,7 +169,7 @@ export const createSignature = async (
     }
     const data = {
       Document_date: new Date().toDateString(),
-      Empresa_name: company.social_denomination,
+      Empresa_name: `nosoy nadie`,
       Empresa_Country: company.country,
       Empresa_City: company.city,
       Empresa_address: company.street_address,
