@@ -275,6 +275,7 @@ export const createSignature = async (
         name: buyer.first_name,
         email: buyer.email,
         role: "Signer 2",
+        delivery_type: "url",
       },
     ]);
     console.log(document);
