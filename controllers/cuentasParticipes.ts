@@ -721,25 +721,24 @@ export const aceptarComprasCuentaParticipe = async (
     // }
     try {
       console.log("Hola");
-      const document = await crearDocumentoDeCompra(
+      const document = await createSignature(
         order,
         cuenta,
         buyer,
-        user.data,
         company,
         prisma
       );
       console.log("doc", document);
-      if (!document || !document.link)
-        return res.status(500).json({ error: "Error al crear documento" });
-      order = await prisma.orders.update({
-        where: { id: order.id },
-        data: {
-          url_sign: document.link,
-          complete_at: new Date(),
-          status: "PENDIENTE_FIRMA",
-        },
-      });
+      // if (!document || !document.link)
+      //   return res.status(500).json({ error: "Error al crear documento" });
+      // order = await prisma.orders.update({
+      //   where: { id: order.id },
+      //   data: {
+      //     url_sign: document.link,
+      //     complete_at: new Date(),
+      //     status: "PENDIENTE_FIRMA",
+      //   },
+      // });
     } catch (e) {
       console.log(e);
       return res.status(400).json(e);
@@ -1135,10 +1134,8 @@ export const rechazarCompraParticipacion = async (
 export const getTemplatesByPandaDoc = async (req: Request, res: Response) => {
   try {
     console.log("hola");
-    // const doc = await client.getTemplates();
-
-    const create = await createSignature();
-    res.json(create);
+    const doc = await client.getTemplates();
+    res.json(doc);
   } catch (e) {
     console.log(e);
     return res.status(500).json({ error: e });
