@@ -17,10 +17,7 @@ const API_KEY = process.env.SIGNATURITKEY;
 const client = new SignaturitClient(API_KEY);
 export const createSignature = async () => {
   try {
-    let plantilla = fs.readFileSync(
-      "emails/emails-user/Gestion User - Login con codigo de acceso.html",
-      "utf-8"
-    );
+    let plantilla = fs.readFileSync("CrearCP.html", "utf-8");
     const data = { "Document.date": new Date().toLocaleString() };
     plantilla = mustache.render(plantilla, data);
     const browser = await puppeteer.launch();
