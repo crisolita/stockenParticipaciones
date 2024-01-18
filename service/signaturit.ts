@@ -266,13 +266,13 @@ export const createSignature = async (
     const document = await client.createSignature(
       "crearCP.pdf",
       {
-        name: buyer.first_name,
-        email: buyer.email,
+        name: creador.first_name,
+        email: creador.email,
         role: "Signer 1",
       },
       {
-        name: creador.first_name,
-        email: creador.email,
+        name: buyer.first_name,
+        email: buyer.email,
         role: "Signer 2",
       }
     );
