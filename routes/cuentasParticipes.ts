@@ -24,7 +24,7 @@ router.post("/comprarCuentaParticipe", comprarParticipacion);
 router.post("/verOrdenesBySell", verOrdenesBySell);
 router.post("/aceptarOrden", aceptarComprasCuentaParticipe);
 router.post("/rechazarOrden", rechazarComprasCuentaParticipe);
-router.post("signDoc", signCompraDoc);
+router.post("/signDoc", signCompraDoc);
 router.get("/templates", getTemplatesByPandaDoc);
 
 export default router;
