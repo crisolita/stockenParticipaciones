@@ -62,8 +62,7 @@ export const defaultClausula = (
   cuenta_cesion_permitidad: boolean,
   cuenta_jurisdiccion: string
 ) => {
-  return;
-  `<h1>CLÁUSULAS</h1>
+  return `<h1>CLÁUSULAS</h1>
   <h2>OBJETO.</h2>
   <p>
   Este Contrato tiene por objeto regular los términos y condiciones de la participación del Cuentapartícipe en los resultados económicos, ya sean, beneficios o pérdidas,

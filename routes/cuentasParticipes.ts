@@ -9,6 +9,8 @@ import {
   getTemplatesByPandaDoc,
   rechazarComprasCuentaParticipe,
   signCompraDoc,
+  verCuentasParticipes,
+  verOrdenesByBuyer,
   verOrdenesBySell,
 } from "../controllers/cuentasParticipes";
 import { querySchemaCrearCuentaPartiipe } from "../middleware/validation";
@@ -21,10 +23,14 @@ router.post(
   crearCuentaParticipe
 );
 router.post("/comprarCuentaParticipe", comprarParticipacion);
-router.post("/verOrdenesBySell", verOrdenesBySell);
 router.post("/aceptarOrden", aceptarComprasCuentaParticipe);
 router.post("/rechazarOrden", rechazarComprasCuentaParticipe);
 router.post("/signDoc", signCompraDoc);
 router.get("/templates", getTemplatesByPandaDoc);
+
+router.post("/verOrdenesBySell", verOrdenesBySell);
+router.post("/verOrdenesByBuyer", verOrdenesByBuyer);
+
+router.post("/verCuentasParticipes", verCuentasParticipes);
 
 export default router;
