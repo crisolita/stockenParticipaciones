@@ -1,14 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 import { Request, Response, response } from "express";
-import {
-  crearDocumentoDeCompra,
-  crearDocumentoDeCompraDeParticipacion,
-  getTemplates,
-  isCompleted,
-} from "../service/pandadoc";
 import axios from "axios";
 import mangopayInstance from "mangopay2-nodejs-sdk";
-import { createSignature } from "../service/signaturit";
+import { createSignature, isCompleted } from "../service/signaturit";
 //@ts-ignore
 import SignaturitClient from "signaturit-sdk";
 const API_KEY = process.env.SIGNATURITKEY;
@@ -734,16 +728,15 @@ export const aceptarComprasCuentaParticipe = async (
       console.log("doc", document);
       if (!document || !document.id)
         return res.status(500).json({ error: "Error al crear documento" });
-      // order = await prisma.orders.update({
-      //   where: { id: order.id },
-      //   data: {
-      //     url_sign: `https://sign-app.${
-      //       ENV == "TEST" ? "sandbox" : ""
-      //     }.signaturit.com/document/${document.id}/${document.document[0].id}`,
-      //     complete_at: new Date(),
-      //     status: "PENDIENTE_FIRMA",
-      //   },
-      // });
+      order = await prisma.orders.update({
+        where: { id: order.id },
+        data: {
+          signatureId: document.id,
+          documentId_first: document.documents[0].id,
+          documentId_second: document.documents[0].id,
+          status: "PENDIENTE_FIRMA",
+        },
+      });
     } catch (e) {
       console.log(e);
       return res.status(400).json(e);
@@ -957,65 +950,74 @@ export const aceptarComprasCuentaParticipe = async (
 //     res.status(500).json(e);
 //   }
 // };
-// export const signCompraDoc = async (req: Request, res: Response) => {
-//   try {
-//     // @ts-ignore
-//     const prisma = req.prisma as PrismaClient;
-//     const { jwtCreador, orderId } = req.body;
-//     const user = await axios.get(
-//       "https://pro.stockencapital.com/api/v1/users/me/",
-//       {
-//         headers: {
-//           Authorization: `${jwtCreador}`,
-//         },
-//       }
-//     );
-//     if (!user || user.data.status != "validated")
-//       return res.status(400).json({ error: "Usuario no valido" });
+export const signCompraDoc = async (req: Request, res: Response) => {
+  try {
+    // @ts-ignore
+    const prisma = req.prisma as PrismaClient;
+    const { jwtCreador, orderId } = req.body;
+    const user = await axios.get(
+      "https://pro.stockencapital.com/api/v1/users/me/",
+      {
+        headers: {
+          Authorization: `${jwtCreador}`,
+        },
+      }
+    );
+    if (!user || user.data.status != "validated")
+      return res.status(400).json({ error: "Usuario no valido" });
 
-//     let order = await prisma.orders.findUnique({
-//       where: { id: orderId, status: "PENDIENTE_FIRMA" },
-//     });
-//     if (!order || !order.buyerID || !order.url_sign || !order.documentId)
-//       return res.status(400).json({ error: "Orden no encontrada" });
-//     const cuenta = await prisma.cuentas_participes.findUnique({
-//       where: { id: order.cuenta_participe_id },
-//     });
-//     if (!cuenta?.templateID)
-//       return res.status(404).json({ error: "No hay template" });
-//     const buyer = await prisma.users_user.findUnique({
-//       where: { id: order.buyerID },
-//     });
-//     if (!buyer) return res.status(400).json({ error: "Comprador no valido" });
+    let order = await prisma.orders.findUnique({
+      where: { id: orderId, status: "PENDIENTE_FIRMA" },
+    });
+    if (
+      !order ||
+      !order.buyerID ||
+      !order.signatureId ||
+      !order.documentId_first ||
+      !order.documentId_second
+    )
+      return res.status(400).json({ error: "Orden no encontrada" });
+    const cuenta = await prisma.cuentas_participes.findUnique({
+      where: { id: order.cuenta_participe_id },
+    });
+    if (!cuenta)
+      return res
+        .status(404)
+        .json({ error: "No existe cuenta participe asociada" });
+    const buyer = await prisma.users_user.findUnique({
+      where: { id: order.buyerID },
+    });
+    if (!buyer) return res.status(400).json({ error: "Comprador no valido" });
 
-//     const docCompleted = await isCompleted(order.documentId);
-//     if (!docCompleted)
-//       return res.status(400).json({ error: "Aun no han firmado ambas partes" });
-//     const participacion = await prisma.participacion.create({
-//       data: {
-//         cuenta_participe_id: cuenta.id,
-//         cantidad: order.cantidad,
-//         monto_pagado: order.precio_total,
-//         document_id: order.documentId,
-//         document_link: order.url_sign,
-//         owner_id: buyer.id,
-//         buy_date: new Date(),
-//       },
-//     });
-//     order = await prisma.orders.update({
-//       where: { id: order.id },
-//       data: {
-//         complete_at: new Date(),
-//         participacion_id: participacion.id,
-//         status: "COMPRA_TERMINADA",
-//       },
-//     });
-//     res.json({ order });
-//   } catch (e) {
-//     console.log(e);
-//     res.status(500).json(e);
-//   }
-// };
+    const docCompleted = await isCompleted(order.signatureId);
+
+    if (docCompleted.length < 2)
+      return res.status(400).json({ error: "Aun no han firmado ambas partes" });
+    const participacion = await prisma.participacion.create({
+      data: {
+        cuenta_participe_id: cuenta.id,
+        cantidad: order.cantidad,
+        monto_pagado: order.precio_total,
+        document_id_first: order.documentId_first,
+        document_id_second: order.documentId_second,
+        owner_id: buyer.id,
+        buy_date: new Date(),
+      },
+    });
+    order = await prisma.orders.update({
+      where: { id: order.id },
+      data: {
+        complete_at: new Date(),
+        participacion_id: participacion.id,
+        status: "COMPRA_TERMINADA",
+      },
+    });
+    res.json({ order });
+  } catch (e) {
+    console.log(e);
+    res.status(500).json(e);
+  }
+};
 
 export const rechazarComprasCuentaParticipe = async (
   req: Request,

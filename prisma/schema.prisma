@@ -1367,8 +1367,6 @@ model orders {
   id           Int                     @id @default(autoincrement())
   precio_total Float
   cantidad     Int
-  url_sign_first     String?
-  url_sign_second    String?
   documentId_first  String?
   documentId_second  String?
   signatureId String?
@@ -1389,8 +1387,8 @@ model participacion {
   cuenta_participe_id       Int
   cantidad           Int
   monto_pagado       Int
-  document_id        String
-  document_link      String
+  document_id_first       String
+  document_id_second  String
   owner_id           Int
   buy_date DateTime
   records record_participaciones[]
