@@ -295,5 +295,6 @@ export const isCompleted = async (signatureId: string) => {
       });
     }
   }
+  console.log(data, "firma");
   return data;
 };
