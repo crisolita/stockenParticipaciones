@@ -32,7 +32,6 @@ export const crearCuentaParticipe = async (req: Request, res: Response) => {
       resultado,
       determinacion,
       juridicion,
-      templateID,
       fecha_lanzamiento,
       liquidacion,
       Clausulas,
@@ -121,7 +120,6 @@ export const crearCuentaParticipe = async (req: Request, res: Response) => {
         determinacion,
         juridicion,
         liquidacion,
-        templateID,
         clausulas: Clausulas,
         companyIDSeller: company.id,
         fecha_lanzamiento: new Date(fecha_lanzamiento),
@@ -407,6 +405,7 @@ export const aceptarComprasCuentaParticipe = async (
     const cuenta = await prisma.cuentas_participes.findUnique({
       where: { id: order.cuenta_participe_id },
     });
+    if (!cuenta) return res.status(400).json({ error: "No hay cuenta" });
     const company = await prisma.companies_company.findUnique({
       where: { id: cuenta?.companyIDSeller },
     });
@@ -419,8 +418,7 @@ export const aceptarComprasCuentaParticipe = async (
       return res.status(400).json({
         error: "Compañia no existe, no pertenece al usuario o no esta validada",
       });
-    if (!cuenta?.templateID)
-      return res.status(404).json({ error: "No hay template" });
+
     const buyer = await prisma.users_user.findUnique({
       where: { id: order.buyerID },
     });
@@ -429,23 +427,23 @@ export const aceptarComprasCuentaParticipe = async (
     let desbloqueoSaldo;
     // / DESBLOQUEAR SALDO MANGOPAY Y ENVIARSELO A VENDEDOR
 
-    // try {
-    //   desbloqueoSaldo = await axios.patch(
-    //     "https://pro.stockencapital.com/api/v1/moneyblocks/update_money_block_status/",
-    //     {
-    //       id: order.bloqueo_id,
-    //       status: "EXECUTED",
-    //     },
-    //     {
-    //       headers: {
-    //         Authorization: `${jwtCreador}`,
-    //       },
-    //     }
-    //   );
-    // } catch (e) {
-    //   console.log(e);
-    //   return res.status(500).json({ error: "Error desbloqueando el saldo" });
-    // }
+    try {
+      desbloqueoSaldo = await axios.patch(
+        "https://pro.stockencapital.com/api/v1/moneyblocks/update_money_block_status/",
+        {
+          id: order.bloqueo_id,
+          status: "EXECUTED",
+        },
+        {
+          headers: {
+            Authorization: `${jwtCreador}`,
+          },
+        }
+      );
+    } catch (e) {
+      console.log(e);
+      return res.status(500).json({ error: "Error desbloqueando el saldo" });
+    }
     // console.log("QEEEE LOCOO");
     // /// transferencia de mangopay de buyer a seller
     // let mangopayIdBuyer,
@@ -576,17 +574,17 @@ export const aceptarComprasCuentaParticipe = async (
         prisma
       );
       console.log("doc", document);
-      // if (!document || !document.id)
-      //   return res.status(500).json({ error: "Error al crear documento" });
-      // order = await prisma.orders.update({
-      //   where: { id: order.id },
-      //   data: {
-      //     signatureId: document.id,
-      //     documentId_first: document.documents[0].id,
-      //     documentId_second: document.documents[0].id,
-      //     status: "PENDIENTE_FIRMA",
-      //   },
-      // });
+      if (!document || !document.id)
+        return res.status(500).json({ error: "Error al crear documento" });
+      order = await prisma.orders.update({
+        where: { id: order.id },
+        data: {
+          signatureId: document.id,
+          documentId_first: document.documents[0].id,
+          documentId_second: document.documents[0].id,
+          status: "PENDIENTE_FIRMA",
+        },
+      });
     } catch (e) {
       console.log(e);
       return res.status(400).json(e);

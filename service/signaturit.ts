@@ -193,22 +193,22 @@ export const createSignature = async (
         if (err) return console.log(err);
         console.log("PDF creado exitosamente en", res.filename);
       });
-    // const document = await client.createSignature("crearCP.pdf", [
-    //   {
-    //     name: creador.first_name,
-    //     email: creador.email,
-    //     role: "Signer 1",
-    //     delivery_type: "url",
-    //   },
-    //   {
-    //     name: buyer.first_name,
-    //     email: buyer.email,
-    //     role: "Signer 2",
-    //     delivery_type: "url",
-    //   },
-    // ]);
-    // console.log(document);
-    // return document;
+    const document = await client.createSignature("crearCP.pdf", [
+      {
+        name: creador.first_name,
+        email: creador.email,
+        role: "Signer 1",
+        delivery_type: "url",
+      },
+      {
+        name: buyer.first_name,
+        email: buyer.email,
+        role: "Signer 2",
+        delivery_type: "url",
+      },
+    ]);
+    console.log(document);
+    return document;
   } catch (e) {
     console.log(e);
     return false;

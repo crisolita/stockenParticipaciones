@@ -1352,7 +1352,6 @@ model cuentas_participes {
   determinacion       String
   plazos_remuneracion String
   juridicion          String
-  templateID          String
   fecha_lanzamiento   DateTime
   companyIDSeller Int
   liquidacion String
@@ -1375,7 +1374,6 @@ model orders {
   sellerID     Int
   bloqueo_id  Int?
   status       StatusOrderCtaParticipe
-  templateID   String?
   companyIdBuyer Int?
   create_date  DateTime
   complete_at  DateTime?
