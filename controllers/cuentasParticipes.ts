@@ -429,23 +429,23 @@ export const aceptarComprasCuentaParticipe = async (
     let desbloqueoSaldo;
     // / DESBLOQUEAR SALDO MANGOPAY Y ENVIARSELO A VENDEDOR
 
-    try {
-      desbloqueoSaldo = await axios.patch(
-        "https://pro.stockencapital.com/api/v1/moneyblocks/update_money_block_status/",
-        {
-          id: order.bloqueo_id,
-          status: "EXECUTED",
-        },
-        {
-          headers: {
-            Authorization: `${jwtCreador}`,
-          },
-        }
-      );
-    } catch (e) {
-      console.log(e);
-      return res.status(500).json({ error: "Error desbloqueando el saldo" });
-    }
+    // try {
+    //   desbloqueoSaldo = await axios.patch(
+    //     "https://pro.stockencapital.com/api/v1/moneyblocks/update_money_block_status/",
+    //     {
+    //       id: order.bloqueo_id,
+    //       status: "EXECUTED",
+    //     },
+    //     {
+    //       headers: {
+    //         Authorization: `${jwtCreador}`,
+    //       },
+    //     }
+    //   );
+    // } catch (e) {
+    //   console.log(e);
+    //   return res.status(500).json({ error: "Error desbloqueando el saldo" });
+    // }
     // console.log("QEEEE LOCOO");
     // /// transferencia de mangopay de buyer a seller
     // let mangopayIdBuyer,
@@ -576,17 +576,17 @@ export const aceptarComprasCuentaParticipe = async (
         prisma
       );
       console.log("doc", document);
-      if (!document || !document.id)
-        return res.status(500).json({ error: "Error al crear documento" });
-      order = await prisma.orders.update({
-        where: { id: order.id },
-        data: {
-          signatureId: document.id,
-          documentId_first: document.documents[0].id,
-          documentId_second: document.documents[0].id,
-          status: "PENDIENTE_FIRMA",
-        },
-      });
+      // if (!document || !document.id)
+      //   return res.status(500).json({ error: "Error al crear documento" });
+      // order = await prisma.orders.update({
+      //   where: { id: order.id },
+      //   data: {
+      //     signatureId: document.id,
+      //     documentId_first: document.documents[0].id,
+      //     documentId_second: document.documents[0].id,
+      //     status: "PENDIENTE_FIRMA",
+      //   },
+      // });
     } catch (e) {
       console.log(e);
       return res.status(400).json(e);
