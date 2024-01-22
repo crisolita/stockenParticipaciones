@@ -87,7 +87,7 @@ export const createSignature = async (
   prisma: PrismaClient
 ) => {
   try {
-    let plantilla = fs.readFileSync("crearCP.html", "utf-8");
+    let plantilla = fs.readFileSync("CrearCP.html", "utf-8");
     let companyBuyer, fiscalresidence;
     if (order.companyIdBuyer) {
       companyBuyer = await prisma.companies_company.findUnique({
@@ -185,7 +185,7 @@ export const createSignature = async (
     console.log("llegue aqui");
     // Ajusta las opciones según tus necesidades
     const options = { format: "Letter" };
-    fs.writeFileSync("createCP.html", mustache.render(plantilla, data));
+    fs.writeFileSync("createdCP.html", mustache.render(plantilla, data));
     const created = fs.readFileSync("createdCP.html", "utf-8");
     pdf
       .create(created)

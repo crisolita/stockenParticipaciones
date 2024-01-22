@@ -56,6 +56,7 @@ export const crearCuentaParticipe = async (req: Request, res: Response) => {
     const company = await prisma.companies_company.findUnique({
       where: { id: companyID },
     });
+
     if (
       !company ||
       company.legal_representative_id != user.data.id ||
