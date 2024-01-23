@@ -1388,6 +1388,7 @@ model participacion {
   document_id_first       String
   document_id_second  String
   owner_id           Int
+  signature_id String
   buy_date DateTime
   records record_participaciones[]
   users_user         users_user         @relation(fields: [owner_id], references: [id])
@@ -1422,8 +1423,9 @@ model record_participaciones {
   participacion_id       Int
   cantidad           Int
   monto_pagado       Int
-  old_document_id        String
-  old_document_link      String
+  old_document_id_first        String
+  old_document_second      String
+  old_signature_id String
   old_owner_id           Int
   change_date DateTime
   participacion participacion @relation(fields:[participacion_id],references: [id])

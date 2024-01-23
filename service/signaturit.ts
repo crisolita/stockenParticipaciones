@@ -53,30 +53,6 @@ export const textoSociedad = (
 
   Se halla representada en este acto por ${legal_representative}, quien actúa en su condición de ${cargo} en virtud de la escritura de apoderamiento otorgada el ${date_apoderamiento}  ante el Notario de ${ciudad_notario_lr} Don ${fullname_notario_lr}, bajo el número ${n_protocolo_lr} de su protocolo.`;
 };
-export const defaultClausula = (
-  cuenta_descripcion_resultado_calculo: string,
-  cuenta_descripcion_liquidacion_pago: string,
-  cuenta_determinacion_resultado: string,
-  cuenta_duracion: string,
-  cuenta_cesion_permitidad: boolean,
-  cuenta_jurisdiccion: string
-) => {
-  let default_plantilla = fs.readFileSync("clausulas.html", "utf-8");
-  default_plantilla = mustache.render(default_plantilla, {
-    cuenta_descripcion_resultado_calculo,
-    cuenta_descripcion_liquidacion_pago,
-    cuenta_determinacion_resultado,
-    cuenta_duracion,
-    cuenta_cesion_permitidad,
-    cuenta_jurisdiccion,
-  });
-  fs.writeFileSync("clausulas.html", default_plantilla);
-  const $ = cheerio.load(fs.readFileSync("clausulas.html", "utf-8"));
-  // Obtener el texto del contenido sin etiquetas HTML
-  const text = $.text();
-  console.log(text);
-  return text;
-};
 
 export const createSignature = async (
   order: orders,
@@ -171,16 +147,7 @@ export const createSignature = async (
       Empresa_descripcion: company.description,
       Proyecto_descripcion: cuenta.descripcion,
       Client_aporte: order.precio_total,
-      Clausulas: cuenta.clausulas
-        ? cuenta.clausulas
-        : defaultClausula(
-            cuenta.resultado,
-            cuenta.liquidacion,
-            cuenta.determinacion,
-            cuenta.duracion.toString(),
-            cuenta.cesion,
-            cuenta.juridicion
-          ),
+      Clausulas: cuenta.clausulas,
     };
     console.log("llegue aqui");
     // Ajusta las opciones según tus necesidades
@@ -227,4 +194,70 @@ export const isCompleted = async (signatureId: string) => {
   }
   console.log(data, "firma");
   return data;
+};
+
+export const createDocReVenta = async (
+  seller: users_user,
+  buyer: users_user,
+  participacion: participacion,
+  cuenta: cuentas_participes,
+  prisma: PrismaClient
+) => {
+  try {
+    let plantilla = fs.readFileSync("reventaDoc.html", "utf-8");
+    let fiscalresidenceBuyer, fiscalresidenceSeller;
+
+    fiscalresidenceBuyer = await prisma.users_fiscalresidence.findFirst({
+      where: { user_id: buyer.id },
+    });
+
+    fiscalresidenceSeller = await prisma.users_fiscalresidence.findFirst({
+      where: { user_id: seller.id },
+    });
+    const data = {
+      fecha_anterior: participacion.buy_date,
+      localidad: `España`,
+      fecha: "Fecha de hyo",
+      fullname_seller: `${seller.first_name} ${seller.last_name}`,
+      edo_seller: seller.marital_status,
+      num_dni_seller: seller.id_document_number,
+      domicilio_seller: `${fiscalresidenceSeller?.street_address} ${fiscalresidenceSeller?.state} ${fiscalresidenceSeller?.city} ${fiscalresidenceSeller?.postal_code} ${fiscalresidenceSeller?.country}`,
+      email_seller: seller.email,
+      fullname_buyer: `${buyer.first_name} ${buyer.last_name}`,
+      edo_buyer: buyer.marital_status,
+      buyer_dni: buyer.id_document_number,
+      buyer_domicilio: `${fiscalresidenceBuyer?.street_address} ${fiscalresidenceBuyer?.state} ${fiscalresidenceBuyer?.city} ${fiscalresidenceBuyer?.postal_code} ${fiscalresidenceBuyer?.country}`,
+      buyer_email: buyer.email,
+      cuenta_descripcion: cuenta.descripcion,
+    };
+    console.log("llegue aqui");
+    // Ajusta las opciones según tus necesidades
+    fs.writeFileSync("reventaDocMaq.html", mustache.render(plantilla, data));
+    const created = fs.readFileSync("reventaDocMaq.html", "utf-8");
+    pdf
+      .create(created)
+      .toFile("reventa.pdf", (err: any, res: { filename: any }) => {
+        if (err) return console.log(err);
+        console.log("PDF creado exitosamente en", res.filename);
+      });
+    const document = await client.createSignature("reventa.pdf", [
+      {
+        name: seller.first_name,
+        email: seller.email,
+        role: "Signer 1",
+        delivery_type: "url",
+      },
+      {
+        name: buyer.first_name,
+        email: buyer.email,
+        role: "Signer 2",
+        delivery_type: "url",
+      },
+    ]);
+    console.log(document);
+    return document;
+  } catch (e) {
+    console.log(e);
+    return false;
+  }
 };

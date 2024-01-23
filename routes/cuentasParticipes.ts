@@ -6,7 +6,6 @@ import {
   aceptarComprasCuentaParticipe,
   comprarParticipacion,
   crearCuentaParticipe,
-  getTemplatesByPandaDoc,
   rechazarComprasCuentaParticipe,
   signCompraDoc,
   verCuentasParticipes,
@@ -26,7 +25,6 @@ router.post("/comprarCuentaParticipe", comprarParticipacion);
 router.post("/aceptarOrden", aceptarComprasCuentaParticipe);
 router.post("/rechazarOrden", rechazarComprasCuentaParticipe);
 router.post("/signDoc", signCompraDoc);
-router.get("/templates", getTemplatesByPandaDoc);
 
 router.post("/verOrdenesBySell", verOrdenesBySell);
 router.post("/verOrdenesByBuyer", verOrdenesByBuyer);
