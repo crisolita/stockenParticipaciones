@@ -4,9 +4,12 @@ import {
   PrismaClient,
   companies_company,
   cuentas_participes,
+  orderNotaConvertible,
   orders,
   participacion,
+  users_fiscalresidence,
   users_user,
+  venta_de_notas_convertibles,
 } from "@prisma/client";
 import fs from "fs";
 import mustache from "mustache";
@@ -15,6 +18,12 @@ import cheerio from "cheerio";
 // replace it with your API key
 const API_KEY = process.env.SIGNATURITKEY;
 const client = new SignaturitClient(API_KEY);
+const options = {
+  weekday: "long",
+  year: "numeric",
+  month: "long",
+  day: "numeric",
+};
 
 export const textoCliente = (
   fullname: string,
@@ -75,7 +84,7 @@ export const createSignature = async (
       });
     }
     const data = {
-      Document_date: new Date().toDateString(),
+      Document_date: new Date().toLocaleDateString("es-ES"),
       Empresa_name: company.social_denomination,
       Empresa_Country: company.country,
       Empresa_City: company.city,
@@ -87,13 +96,13 @@ export const createSignature = async (
         company.registration_data_date
           ? company.registration_data_date.toString()
           : ""
-      ).toDateString(),
+      ).toLocaleDateString("es-ES"),
       Empresa_num_protocolo: company.registration_data_number,
       Empresa_inscrita_date: new Date(
         company.registration_data_inscription_date
           ? company.registration_data_inscription_date
           : ""
-      ).toDateString(),
+      ).toLocaleDateString("es-ES"),
       Empresa_ciudad_provincia: company.state,
       Empresa_tomo_numero: company.registration_data_volume_number,
       Empresa_folio: company.registration_data_sheet_number,
@@ -107,7 +116,7 @@ export const createSignature = async (
         company.governing_bodies_legal_representative_powers_date
           ? company.governing_bodies_legal_representative_powers_date
           : ""
-      ).toDateString(),
+      ).toLocaleDateString("es-ES"),
       Empresa_ciudad_notario_apoderamiento:
         company.governing_bodies_notary_city,
       Empresa_fullname_notario_apoderamiento:
@@ -126,11 +135,15 @@ export const createSignature = async (
             companyBuyer.street_address,
             companyBuyer.cif,
             companyBuyer.registration_data_notary_city,
-            companyBuyer.registration_data_date?.toDateString(),
+            companyBuyer.registration_data_date?.toLocaleDateString("es-ES"),
             companyBuyer.registration_data_number,
-            companyBuyer.registration_data_inscription_date?.toDateString(),
+            companyBuyer.registration_data_inscription_date?.toLocaleDateString(
+              "es-ES"
+            ),
             companyBuyer.registration_data_state,
-            companyBuyer.governing_bodies_legal_representative_powers_date?.toDateString(),
+            companyBuyer.governing_bodies_legal_representative_powers_date?.toLocaleDateString(
+              "es-ES"
+            ),
             companyBuyer.governing_bodies_legal_representative_full_name,
             companyBuyer.governing_bodies_notary_city,
             companyBuyer.governing_bodies_notary_number,
@@ -151,7 +164,6 @@ export const createSignature = async (
     };
     console.log("llegue aqui");
     // Ajusta las opciones según tus necesidades
-    const options = { format: "Letter" };
     fs.writeFileSync("createdCP.html", mustache.render(plantilla, data));
     const created = fs.readFileSync("createdCP.html", "utf-8");
     pdf
@@ -215,9 +227,11 @@ export const createDocReVenta = async (
       where: { user_id: seller.id },
     });
     const data = {
-      fecha_anterior: participacion.buy_date,
+      fecha_anterior: new Date(participacion.buy_date).toLocaleDateString(
+        "es-ES"
+      ),
       localidad: `España`,
-      fecha: "Fecha de hyo",
+      fecha: new Date().toLocaleDateString(),
       fullname_seller: `${seller.first_name} ${seller.last_name}`,
       edo_seller: seller.marital_status,
       num_dni_seller: seller.id_document_number,
@@ -262,51 +276,74 @@ export const createDocReVenta = async (
   }
 };
 
+///// DE AQUI EN ADELANTE NOTAS CONVERTIBLES
+export const textoClientePersona = (
+  user: users_user,
+  fiscalresidence: users_fiscalresidence
+) => {
+  return `${user.first_name} ${user.last_name}, mayor de edad, con domicilio a estos efectos en ${fiscalresidence.street_address} ${fiscalresidence.city} ${fiscalresidence.country}, correo electrónico ${user.email}, y provisto de N.I.F. ${user.id_document_number}, en vigor, en su propio nombre y derecho (en adelante, el “Prestamista”).`;
+};
+export const textoClienteEmpresa = (
+  user: users_user,
+  company: companies_company
+) => {
+  return `${company.social_denomination}, sociedad de responsabilidad limitada, provista de N.I.F. ${company.cif}, con domicilio social en ${company.city}  y correo electrónico ${user.email} (en adelante, el “Prestamista”), representada en este acto por ${user.first_name} ${user.last_name} en su condición de ${company.governing_bodies_legal_representative_position}. `;
+};
 export const createDocNotaConvertible = async (
   seller: users_user,
   buyer: users_user,
-  participacion: participacion,
-  cuenta: cuentas_participes,
+  fiscalresidenceBuyer: users_fiscalresidence,
+  order: orderNotaConvertible,
+  companySeller: companies_company,
+  venta: venta_de_notas_convertibles,
   prisma: PrismaClient
 ) => {
   try {
-    let plantilla = fs.readFileSync("reventaDoc.html", "utf-8");
-    let fiscalresidenceBuyer, fiscalresidenceSeller;
-
-    fiscalresidenceBuyer = await prisma.users_fiscalresidence.findFirst({
-      where: { user_id: buyer.id },
-    });
-
-    fiscalresidenceSeller = await prisma.users_fiscalresidence.findFirst({
-      where: { user_id: seller.id },
-    });
+    let plantilla = fs.readFileSync("venta_nota.html", "utf-8");
+    let companyBuyer;
+    if (order.companyIdBuyer) {
+      companyBuyer = await prisma.companies_company.findUnique({
+        where: { id: order.companyIdBuyer },
+      });
+    }
     const data = {
-      fecha_anterior: participacion.buy_date,
-      localidad: `España`,
-      fecha: "Fecha de hyo",
-      fullname_seller: `${seller.first_name} ${seller.last_name}`,
-      edo_seller: seller.marital_status,
-      num_dni_seller: seller.id_document_number,
-      domicilio_seller: `${fiscalresidenceSeller?.street_address} ${fiscalresidenceSeller?.state} ${fiscalresidenceSeller?.city} ${fiscalresidenceSeller?.postal_code} ${fiscalresidenceSeller?.country}`,
-      email_seller: seller.email,
-      fullname_buyer: `${buyer.first_name} ${buyer.last_name}`,
-      edo_buyer: buyer.marital_status,
-      buyer_dni: buyer.id_document_number,
-      buyer_domicilio: `${fiscalresidenceBuyer?.street_address} ${fiscalresidenceBuyer?.state} ${fiscalresidenceBuyer?.city} ${fiscalresidenceBuyer?.postal_code} ${fiscalresidenceBuyer?.country}`,
-      buyer_email: buyer.email,
-      cuenta_descripcion: cuenta.descripcion,
+      Document_date: new Date().toLocaleDateString("es-Es"),
+      Empresa_name: companySeller.social_denomination,
+      Empresa_NIF: companySeller.cif,
+      Empresa_address: `${companySeller.street_address} ${companySeller.state}`,
+      Empresa_email: seller.email,
+      Empresa_fullname_lr: `${seller.first_name} ${seller.last_name}`,
+      Empresa_apoderado_cargo:
+        companySeller.governing_bodies_legal_representative_position,
+      Client_datos: companyBuyer
+        ? textoClienteEmpresa(buyer, companySeller)
+        : textoClientePersona(buyer, fiscalresidenceBuyer),
+      Client_aporte: order.precio_total,
+      nc_interes_fijo: venta.interes_fijo,
+      nc_interes_variable: venta.interes_variable,
+      nc_limite_intereses: "",
+      fecha_vencimiento: new Date(venta.vence_date ? venta.vence_date : ""),
+      importe_ronda_letra: "",
+      importe_ronda_cifra: "",
+      importe_cap_no_ronda: venta.CAP_no_ronda,
+      importe_cap_no_ronda_cifra: "",
+      Amortizacion: "",
+      floor: "",
+      Devolucion: "",
     };
-    console.log("llegue aqui");
     // Ajusta las opciones según tus necesidades
-    fs.writeFileSync("reventaDocMaq.html", mustache.render(plantilla, data));
-    const created = fs.readFileSync("reventaDocMaq.html", "utf-8");
+    fs.writeFileSync(
+      "venta_nota_maqueta.html",
+      mustache.render(plantilla, data)
+    );
+    const created = fs.readFileSync("venta_nota_maqueta.html", "utf-8");
     pdf
       .create(created)
-      .toFile("reventa.pdf", (err: any, res: { filename: any }) => {
+      .toFile("venta_nota.pdf", (err: any, res: { filename: any }) => {
         if (err) return console.log(err);
         console.log("PDF creado exitosamente en", res.filename);
       });
-    const document = await client.createSignature("reventa.pdf", [
+    const document = await client.createSignature("venta_nota.pdf", [
       {
         name: seller.first_name,
         email: seller.email,

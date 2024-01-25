@@ -1,6 +1,5 @@
 import { PrismaClient } from "@prisma/client";
 import { Request, Response, response } from "express";
-import { crearDocumentoDeCompra, getTemplates } from "../service/pandadoc";
 import axios from "axios";
 import mangopayInstance from "mangopay2-nodejs-sdk";
 import { crearVentaNotaConvertible } from "../service/notasConvertibles";
@@ -162,16 +161,7 @@ export const comprarNotaConvertible = async (req: Request, res: Response) => {
         !companyBuyer ||
         !companyBuyer.social_denomination ||
         !companyBuyer.country ||
-        !companyBuyer.registration_data_notary_full_name ||
-        !companyBuyer.registration_data_volume_number ||
-        !companyBuyer.registration_data_page_number ||
-        !companyBuyer.registration_data_inscription_date ||
-        !companyBuyer.registration_data_state ||
-        !companyBuyer.governing_bodies_legal_representative_powers_date ||
         !companyBuyer.governing_bodies_legal_representative_full_name ||
-        !companyBuyer.governing_bodies_notary_city ||
-        !companyBuyer.governing_bodies_notary_number ||
-        !companyBuyer.governing_bodies_notary_full_name ||
         !companyBuyer.governing_bodies_legal_representative_position ||
         companyBuyer.legal_representative_id != user.data.id
       )
@@ -225,6 +215,7 @@ export const comprarNotaConvertible = async (req: Request, res: Response) => {
         status: "SALDO_BLOQUEADO",
         bloqueo_id: bloqueoSaldo.data.id,
         create_date: new Date(),
+        companyIdBuyer: companyIdBuyer,
       },
     });
     venta = await prisma.venta_de_notas_convertibles.update({

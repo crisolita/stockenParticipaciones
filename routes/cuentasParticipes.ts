@@ -1,6 +1,4 @@
 import express from "express";
-import { authenticateToken } from "../middleware/auth";
-import { isAdmin } from "../middleware/isAdmin";
 import Joivalidator from "express-joi-validation";
 import {
   aceptarComprasCuentaParticipe,
@@ -8,7 +6,6 @@ import {
   comprarParticipacionPorOrden,
   crearCuentaParticipe,
   crearVentaDeParticipacion,
-  rechazarCompraParticipacion,
   rechazarComprasCuentaParticipe,
   signCompraDoc,
   verCuentasParticipes,
@@ -38,6 +35,5 @@ router.post("/verCuentasParticipes", verCuentasParticipes);
 
 router.post("/venderParticipacion", crearVentaDeParticipacion);
 router.post("/comprarParticipacion", comprarParticipacionPorOrden);
-router.post("/rechazarOrdenParticipacion", rechazarCompraParticipacion);
 
 export default router;

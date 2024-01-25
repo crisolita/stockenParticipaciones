@@ -260,6 +260,7 @@ export const comprarParticipacion = async (req: Request, res: Response) => {
         status: "SALDO_BLOQUEADO",
         bloqueo_id: bloqueoSaldo.data.id,
         create_date: new Date(),
+        companyIdSeller: cuenta_participe.companyIDSeller,
       },
     });
     cuenta_participe = await prisma.cuentas_participes.update({
@@ -347,8 +348,13 @@ export const verCuentasParticipes = async (req: Request, res: Response) => {
     if (!user || user.data.status != "validated")
       return res.status(400).json({ error: "Usuario no valido" });
     let cuentas_participes = await prisma.cuentas_participes.findMany();
-
-    return res.json(cuentas_participes);
+    let reventas = await prisma.orders.findMany({
+      where: { status: "VENTA_ACTIVA" },
+    });
+    reventas = reventas.filter((x) => {
+      return x.participacion_id;
+    });
+    return res.json({ cuentas_participes, reventas });
   } catch (e) {
     res.status(500).json(e);
   }
@@ -1062,10 +1068,11 @@ export const comprarParticipacionPorOrden = async (
       order = await prisma.orders.update({
         where: { id: order.id },
         data: {
-          status: "COMPRA_TERMINADA",
+          status: "PENDIENTE_FIRMA",
           documentId_first: document.documents[0].id,
           documentId_second: document.documents[1].id,
           signatureId: document.id,
+          buyerID: user.data.id,
         },
       });
     } catch (e) {
@@ -1073,68 +1080,6 @@ export const comprarParticipacionPorOrden = async (
       return res.status(400).json(e);
     }
     return res.json(order);
-  } catch (e) {
-    console.log(e);
-    res.status(500).json(e);
-  }
-};
-
-export const rechazarCompraParticipacion = async (
-  req: Request,
-  res: Response
-) => {
-  try {
-    // @ts-ignore
-    const prisma = req.prisma as PrismaClient;
-    const { jwtCreador, orderId } = req.body;
-    const user = await axios.get(
-      "https://pro.stockencapital.com/api/v1/users/me/",
-      {
-        headers: {
-          Authorization: `${jwtCreador}`,
-        },
-      }
-    );
-    if (!user || user.data.status != "validated")
-      return res.status(400).json({ error: "Usuario no valido" });
-
-    let order = await prisma.orders.findUnique({
-      where: { id: orderId, status: "SALDO_BLOQUEADO" },
-    });
-    if (!order || order.sellerID != user.data.id || !order.buyerID)
-      return res.status(400).json({ error: "Orden no encontrada" });
-
-    /// DESBLOQUEAR SALDO MANGOPAY
-    const desbloqueoSaldo = await axios.patch(
-      "https://pro.stockencapital.com/api/v1/moneyblocks/update_money_block_status/",
-      {
-        id: order.bloqueo_id,
-        status: "DEACTIVATED",
-      },
-      {
-        headers: {
-          Authorization: `${jwtCreador}`,
-        },
-      }
-    );
-    order = await prisma.orders.update({
-      where: { id: order.id },
-      data: { complete_at: new Date(), status: "RECHAZADA" },
-    });
-    const newOrder = await prisma.orders.create({
-      data: {
-        precio_total: order.precio_total,
-        cantidad: order.cantidad,
-        cuenta_participe_id: order.cuenta_participe_id,
-        sellerID: order.sellerID,
-        status: "VENTA_ACTIVA",
-        participacion_id: order.participacion_id,
-        create_date: order.create_date,
-        companyIdBuyer: order.companyIdBuyer,
-        companyIdSeller: order.companyIdSeller,
-      },
-    });
-    res.json({ order, newOrder });
   } catch (e) {
     console.log(e);
     res.status(500).json(e);

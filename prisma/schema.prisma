@@ -1394,6 +1394,7 @@ document_id_second String?
 create_date  DateTime
 complete_at  DateTime?
 sellerId Int
+companyIdBuyer Int?
 buyerId Int?
 bloqueo_id Int?
 status StatusOrderCtaParticipe
