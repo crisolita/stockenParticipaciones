@@ -347,14 +347,43 @@ export const verCuentasParticipes = async (req: Request, res: Response) => {
     );
     if (!user || user.data.status != "validated")
       return res.status(400).json({ error: "Usuario no valido" });
-    let cuentas_participes = await prisma.cuentas_participes.findMany();
+    let cuentas = await prisma.cuentas_participes.findMany();
     let reventas = await prisma.orders.findMany({
       where: { status: "VENTA_ACTIVA" },
     });
+    let cuentas_participes: any[] = [];
     reventas = reventas.filter((x) => {
       return x.participacion_id;
     });
-    return res.json({ cuentas_participes, reventas });
+    for (let cuenta of cuentas) {
+      let revende;
+      for (let reventa of reventas) {
+        if (reventa.cuenta_participe_id == cuenta.id) revende = reventa;
+      }
+      cuentas_participes.push({
+        id: cuenta.id,
+        creator_id: cuenta.creator_id,
+        nombre_del_proyecto: cuenta.nombre_del_proyecto,
+        descripcion: cuenta.descripcion,
+        cantidad_a_vender: cuenta.cantidad_a_vender,
+        precio_unitario: cuenta.precio_unitario,
+        cantidad_restante: cuenta.cantidad_restante,
+        cesion: cuenta.cesion,
+        duracion: cuenta.duracion,
+        remuneracion: cuenta.remuneracion,
+        resultado: cuenta.resultado,
+        determinacion: cuenta.determinacion,
+        plazos_remuneracion: cuenta.plazos_remuneracion,
+        juridicion: cuenta.juridicion,
+        fecha_lanzamiento: cuenta.fecha_lanzamiento,
+        companyIDSeller: cuenta.companyIDSeller,
+        liquidacion: cuenta.liquidacion,
+        clausulas: cuenta.clausulas,
+        reventas: revende,
+      });
+    }
+
+    return res.json(cuentas_participes);
   } catch (e) {
     res.status(500).json(e);
   }
