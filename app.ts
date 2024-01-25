@@ -4,7 +4,7 @@ import cors from "cors";
 // import morgan from "morgan";
 import { PrismaClient } from "@prisma/client";
 import cuentasParticipes from "./routes/cuentasParticipes";
-
+import notasConvertibles from "./routes/notasConvertibles";
 
 import bodyParser from "body-parser";
 
@@ -12,12 +12,9 @@ const prisma = new PrismaClient();
 const app: Express = express();
 const port = process.env.PORT || 3000;
 
-
-
-
 app.use(cors());
 // app.use(morgan("tiny"));
-app.use(bodyParser.json({limit: '50mb'}));
+app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.json());
 
@@ -28,14 +25,13 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 
 app.use("/cuentas_participes", cuentasParticipes);
+app.use("/notas_convertibles", notasConvertibles);
 
-
-
-app.use((err:any, req:any, res:any, next:any) => {
+app.use((err: any, req: any, res: any, next: any) => {
   if (err && err.error && err.error.isJoi) {
     // we had a joi error, let's return a custom 400 json response
     res.status(400).json({
-      error: err.error.details[0].message
+      error: err.error.details[0].message,
     });
   } else {
     // pass on to another error handler

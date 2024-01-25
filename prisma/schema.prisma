@@ -1271,6 +1271,7 @@ model users_user {
   cuentas_participes                                                           cuentas_participes[]
   participacion                                                                 participacion[]
   nota_convertible nota_convertible[]
+  venta_convertibel venta_de_notas_convertibles[]
   @@index([cod], map: "users_user_cod_7b7c3ebf")
   @@index([cod], map: "users_user_cod_7b7c3ebf_like")
   @@index([email], map: "users_user_email_243f6e77_like")
@@ -1373,11 +1374,29 @@ model orders {
   buyerID      Int?
   sellerID     Int
   bloqueo_id  Int?
+  companyIdSeller Int?
   status       StatusOrderCtaParticipe
   companyIdBuyer Int?
   create_date  DateTime
   complete_at  DateTime?
   participacion_id Int?
+}
+
+model orderNotaConvertible {
+ id           Int                     @id @default(autoincrement())
+nota_convertible_id Int?
+cantidad Int
+precio_total Float
+venta_nc_id Int?
+signature_id String?
+document_id_first String?
+document_id_second String?
+create_date  DateTime
+complete_at  DateTime?
+sellerId Int
+buyerId Int?
+bloqueo_id Int?
+status StatusOrderCtaParticipe
 }
 
 model participacion {
@@ -1394,6 +1413,7 @@ model participacion {
   users_user         users_user         @relation(fields: [owner_id], references: [id])
   cuentas_participes cuentas_participes @relation(fields: [cuenta_participe_id], references: [id])
 }
+
 model mangopay_basemangopaytransaction_cuenta_participe {
   id                               Int                               @id @default(autoincrement())
   created                          DateTime                          @db.Timestamptz(6)
@@ -1434,7 +1454,9 @@ model record_participaciones {
 model venta_de_notas_convertibles {
 id                 Int                @id @default(autoincrement())
 cantidad_a_vender Int
+cantidad_restante Int
 ticket_minimo     Float
+creador_id Int
 companyID Int
 interes_fijo Float?
 interes_variable Float?
@@ -1446,22 +1468,27 @@ CAP_no_ronda String?
 floor String?
 fecha_devolucion DateTime?
 negociar Boolean
+user users_user @relation(fields: [creador_id], references: [id])
 }
 model nota_convertible {
 id                 Int                @id @default(autoincrement())
 valor Float
-companyID Int
+venta_nc_id Int?
+document_id_first       String?
+document_id_second  String?
+  signature_id String?
+  buy_date DateTime
 interes_fijo Float?
 interes_variable Float?
 vence_date DateTime?
 tasa_descuento Float?
-capitulacion Float?
-CAP_no_ronda Float?
-floor Float?
+capitulacion String?
+CAP_no_ronda String?
+floor String?
 fecha_devolucion DateTime?
 negociar Boolean
-user_id Int
-user users_user @relation(fields: [user_id], references: [id])
+owner_id Int
+user users_user @relation(fields: [owner_id], references: [id])
 }
 
 

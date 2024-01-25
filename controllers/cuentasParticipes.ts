@@ -280,7 +280,7 @@ export const verOrdenesBySell = async (req: Request, res: Response) => {
     // @ts-ignore
     const prisma = req.prisma as PrismaClient;
 
-    const { jwtUser } = req.body;
+    const { jwtUser, companyId } = req.body;
     const user = await axios.get(
       "https://pro.stockencapital.com/api/v1/users/me/",
       {
@@ -298,12 +298,20 @@ export const verOrdenesBySell = async (req: Request, res: Response) => {
     let porFirmarVendedor = [];
     saldoBloqueado.push(
       await prisma.orders.findMany({
-        where: { sellerID: user.data.id, status: "SALDO_BLOQUEADO" },
+        where: {
+          sellerID: user.data.id,
+          status: "SALDO_BLOQUEADO",
+          companyIdSeller: companyId,
+        },
       })
     );
     finalizadas.push(
       await prisma.orders.findMany({
-        where: { sellerID: user.data.id, status: "COMPRA_TERMINADA" },
+        where: {
+          sellerID: user.data.id,
+          status: "COMPRA_TERMINADA",
+          companyIdSeller: companyId,
+        },
       })
     );
     porFirmarVendedor.push(
@@ -311,6 +319,7 @@ export const verOrdenesBySell = async (req: Request, res: Response) => {
         where: {
           sellerID: user.data.id,
           status: "PENDIENTE_FIRMA",
+          companyIdSeller: companyId,
         },
       })
     );
@@ -784,7 +793,7 @@ export const crearVentaDeParticipacion = async (
     // @ts-ignore
     const prisma = req.prisma as PrismaClient;
 
-    const { participacion_id, jwtUser, precio } = req.body;
+    const { participacion_id, jwtUser, precio, companyIDSeller } = req.body;
 
     let participacion = await prisma.participacion.findUnique({
       where: { id: participacion_id },
@@ -808,13 +817,28 @@ export const crearVentaDeParticipacion = async (
       return res
         .status(400)
         .json({ error: "Participacion no pertenece al usuario" });
+    let mangopayWallet, mangopayId;
+    if (companyIDSeller) {
+      const company = await prisma.companies_company.findUnique({
+        where: { id: companyIDSeller },
+      });
+      if (!company || !company.cod)
+        return res.status(400).json({ error: "Compañia no encontrada" });
+      mangopayWallet = await prisma.mangopay_mangopaywallet.findFirst({
+        where: { cod: company.cod },
+      });
+      mangopayId = await prisma.mangopay_mangopayuser.findFirst({
+        where: { cod: company.cod },
+      });
+    } else {
+      mangopayWallet = await prisma.mangopay_mangopaywallet.findFirst({
+        where: { cod: user.data.cod },
+      });
+      mangopayId = await prisma.mangopay_mangopayuser.findFirst({
+        where: { cod: user.data.cod },
+      });
+    }
 
-    const mangopayWallet = await prisma.mangopay_mangopaywallet.findFirst({
-      where: { cod: user.data.cod },
-    });
-    const mangopayId = await prisma.mangopay_mangopayuser.findFirst({
-      where: { cod: user.data.cod },
-    });
     if (!mangopayWallet || !mangopayId)
       return res
         .status(404)
@@ -827,6 +851,7 @@ export const crearVentaDeParticipacion = async (
         cuenta_participe_id: participacion.cuenta_participe_id,
         sellerID: participacion.owner_id,
         status: "VENTA_ACTIVA",
+        companyIdSeller: companyIDSeller ? companyIDSeller : null,
         participacion_id: participacion.id,
         create_date: new Date(),
       },
@@ -845,7 +870,7 @@ export const comprarParticipacionPorOrden = async (
     // @ts-ignore
     const prisma = req.prisma as PrismaClient;
 
-    const { orderId, jwtUser } = req.body;
+    const { orderId, jwtUser, companyIdBuyer } = req.body;
     let order = await prisma.orders.findUnique({
       where: { id: orderId },
     });
@@ -863,25 +888,68 @@ export const comprarParticipacionPorOrden = async (
         },
       }
     );
-    if (!user || user.data.status != "validated")
+    if (!user || user.data.status != "validated" || !user.data.cod)
       return res.status(400).json({ error: "Usuario no valido" });
     console.log(user.data.cod);
-    const funds = await axios.get(
-      `https://pro.stockencapital.com/api/v1/users/${user.data.cod}/funds`,
-      {
-        headers: {
-          Authorization: `${jwtUser}`,
-        },
-      }
-    );
-    console.log(funds.data);
-    const mangopayWallet = await prisma.mangopay_mangopaywallet.findFirst({
-      where: { cod: user.data.cod },
+    const seller = await prisma.users_user.findUnique({
+      where: { id: order.sellerID },
     });
-    const mangopayId = await prisma.mangopay_mangopayuser.findFirst({
-      where: { cod: user.data.cod },
+    if (!seller || !seller.cod)
+      return res.status(404).json({ error: "Vendedor no valido" });
+    let funds, mangopayWalletBuyer, mangopayIdBuyer;
+    if (companyIdBuyer) {
+      const company = await prisma.companies_company.findUnique({
+        where: { id: companyIdBuyer },
+      });
+      if (
+        !company ||
+        company.legal_representative_id !== user.data.id ||
+        company.status != "validated" ||
+        !company.cod
+      )
+        return res.status(400).json({ error: "Compañia no valida" });
+      funds = await axios.get(
+        `https://pro.stockencapital.com/api/v1/users/${companyIdBuyer.cod}/funds`,
+        {
+          headers: {
+            Authorization: `${jwtUser}`,
+          },
+        }
+      );
+      mangopayWalletBuyer = (
+        await prisma.mangopay_mangopaywallet.findFirst({
+          where: { cod: company.cod },
+        })
+      )?.wallet_id;
+      mangopayIdBuyer = (
+        await prisma.mangopay_mangopayuser.findFirst({
+          where: { cod: company.cod },
+        })
+      )?.id;
+    } else {
+      funds = await axios.get(
+        `https://pro.stockencapital.com/api/v1/users/${user.data.cod}/funds`,
+        {
+          headers: {
+            Authorization: `${jwtUser}`,
+          },
+        }
+      );
+      mangopayWalletBuyer = (
+        await prisma.mangopay_mangopaywallet.findFirst({
+          where: { cod: user.data.cod },
+        })
+      )?.wallet_id;
+      mangopayIdBuyer = (
+        await prisma.mangopay_mangopayuser.findFirst({
+          where: { cod: user.data.cod },
+        })
+      )?.id;
+    }
+    const cuenta = await prisma.cuentas_participes.findUnique({
+      where: { id: order.cuenta_participe_id },
     });
-    if (!mangopayWallet || !mangopayId)
+    if (!mangopayWalletBuyer || !mangopayIdBuyer)
       return res
         .status(404)
         .json({ error: "No hay datos de mangopay suficientes" });
@@ -889,6 +957,14 @@ export const comprarParticipacionPorOrden = async (
     const fiscalresidence = await prisma.users_fiscalresidence.findFirst({
       where: { user_id: user.data.id },
     });
+    if (!order.participacion_id)
+      return res.status(404).json({ error: "Participacion id no encontrada" });
+    const participacion = await prisma.participacion.findUnique({
+      where: { id: order.participacion_id },
+    });
+    if (!participacion)
+      return res.status(404).json({ error: "Participacion no encontrada" });
+    if (!cuenta) return res.status(404).json({ error: "Cuenta no encontrada" });
     if (
       !user.data.first_name ||
       !user.data.last_name ||
@@ -903,40 +979,99 @@ export const comprarParticipacionPorOrden = async (
 
     if (funds.data.funds < order.precio_total)
       return res.status(400).json({ error: "Fondo insuficiente" });
-    // /bloquear saldo
-    /// bloqueo de mangopay
-
-    try {
-      const seller = await prisma.users_user.findUnique({
-        where: { id: order.sellerID },
+    /// transferencia de mangopay de buyer a seller
+    let mangopayIdSeller, mangopayWalletSeller;
+    if (order.companyIdSeller) {
+      const companySeller = await prisma.companies_company.findUnique({
+        where: { id: order.companyIdSeller },
       });
-      const bloqueoSaldo = await axios.post(
-        "https://pro.stockencapital.com/api/v1/moneyblocks/create_money_block/",
-        {
-          blocked_amount: order.precio_total,
-          user_cod: user.data.cod,
-          company_cod: seller?.cod,
-          status: "PROCESSING",
-        },
-        {
-          headers: {
-            Authorization: `${jwtUser}`,
-          },
-        }
-      );
-    } catch (e) {
-      console.log(e);
-      res.status(400).json({ error: "Error al bloquear saldo" });
+      if (!companySeller || !companySeller.cod)
+        return res.status(400).json({ error: "Compañia no encontrada" });
+      mangopayIdSeller = (
+        await prisma.mangopay_mangopayuser.findFirst({
+          where: { cod: companySeller.cod },
+        })
+      )?.mangopay_id;
+      mangopayWalletSeller = (
+        await prisma.mangopay_mangopaywallet.findFirst({
+          where: { cod: companySeller.cod },
+        })
+      )?.wallet_id;
+    } else {
+      mangopayIdSeller = (
+        await prisma.mangopay_mangopayuser.findFirst({
+          where: { cod: seller.cod },
+        })
+      )?.mangopay_id;
+      mangopayWalletSeller = (
+        await prisma.mangopay_mangopaywallet.findFirst({
+          where: { cod: seller.cod },
+        })
+      )?.wallet_id;
     }
 
-    order = await prisma.orders.update({
-      where: { id: order.id },
-      data: {
-        buyerID: user.data.id,
-        status: "SALDO_BLOQUEADO",
+    let myTransfer = {
+      AuthorId: mangopayIdBuyer,
+      Tag: "Created using Mangopay NodeJS SDK",
+      CreditedUserId: mangopayIdSeller,
+      DebitedFunds: {
+        Currency: "EUR",
+        Amount: order.precio_total * 100,
       },
-    });
+      Fees: {
+        Currency: "EUR",
+        Amount: 0,
+      },
+      DebitedWalletId: mangopayWalletBuyer,
+      CreditedWalletId: mangopayWalletSeller,
+    };
 
+    const createTransfer = async (
+      myTransfer: mangopayInstance.transfer.CreateTransfer
+    ) => {
+      try {
+        const response = await mangopay.Transfers.create(myTransfer);
+        console.log(response);
+        return response;
+      } catch (err) {
+        console.log(err);
+        return false;
+      }
+    };
+    try {
+      //@ts-ignore
+      const transferResponse = await createTransfer(myTransfer);
+      if (!transferResponse || transferResponse.Status != "SUCCEEDED")
+        return res.status(400).json({ error: "Transferencia ha fallado" });
+    } catch (e) {
+      console.log(e);
+      return res.status(500).json(e);
+    }
+    try {
+      const document = await createDocReVenta(
+        seller,
+        user.data,
+        participacion,
+        cuenta,
+        prisma
+      );
+      console.log("doc", document);
+      if (!document || !document.id)
+        return res.status(500).json({ error: "Error al crear documento" });
+      // guardar particpacion en historial y asignar a nuevo comprador
+      order = await prisma.orders.update({
+        where: { id: order.id },
+        data: {
+          status: "COMPRA_TERMINADA",
+          documentId_first: document.documents[0].id,
+          documentId_second: document.documents[1].id,
+          signatureId: document.id,
+        },
+      });
+    } catch (e) {
+      console.log(e);
+      return res.status(400).json(e);
+    }
     return res.json(order);
   } catch (e) {
     console.log(e);
@@ -995,187 +1130,11 @@ export const rechazarCompraParticipacion = async (
         status: "VENTA_ACTIVA",
         participacion_id: order.participacion_id,
         create_date: order.create_date,
+        companyIdBuyer: order.companyIdBuyer,
+        companyIdSeller: order.companyIdSeller,
       },
     });
     res.json({ order, newOrder });
-  } catch (e) {
-    console.log(e);
-    res.status(500).json(e);
-  }
-};
-
-export const aceptarCompraParticipacion = async (
-  req: Request,
-  res: Response
-) => {
-  try {
-    // @ts-ignore
-    const prisma = req.prisma as PrismaClient;
-    const { jwtCreador, orderId } = req.body;
-    let user;
-    try {
-      user = await axios.get(
-        "https://pro.stockencapital.com/api/v1/users/me/",
-        {
-          headers: {
-            Authorization: `${jwtCreador}`,
-          },
-        }
-      );
-    } catch (e) {
-      console.log(e);
-
-      return res.status(400).json(e);
-    }
-    if (!user || user.data.status != "validated")
-      return res.status(400).json({ error: "Usuario no valido" });
-    let order = await prisma.orders.findUnique({
-      where: { id: orderId, status: "SALDO_BLOQUEADO" },
-    });
-    if (!order || order.sellerID != user.data.id || !order.buyerID)
-      return res.status(400).json({ error: "Orden no encontrada" });
-    const cuenta = await prisma.cuentas_participes.findUnique({
-      where: { id: order.cuenta_participe_id },
-    });
-
-    const buyer = await prisma.users_user.findUnique({
-      where: { id: order.buyerID },
-    });
-
-    if (!buyer) return res.status(400).json({ error: "Comprador no valido" });
-    let desbloqueoSaldo;
-    // / DESBLOQUEAR SALDO MANGOPAY Y ENVIARSELO A VENDEDOR
-
-    try {
-      desbloqueoSaldo = await axios.patch(
-        "https://pro.stockencapital.com/api/v1/moneyblocks/update_money_block_status/",
-        {
-          id: order.bloqueo_id,
-          status: "EXECUTED",
-        },
-        {
-          headers: {
-            Authorization: `${jwtCreador}`,
-          },
-        }
-      );
-    } catch (e) {
-      console.log(e);
-      return res.status(500).json(e);
-    }
-    /// transferencia de mangopay de buyer a seller
-    let mangopayIdBuyer,
-      mangopayIdSeller,
-      mangopayWalletBuyer,
-      mangopayWalletSeller;
-    mangopayIdSeller = (
-      await prisma.mangopay_mangopayuser.findFirst({
-        where: { cod: user.data.cod },
-      })
-    )?.mangopay_id;
-    mangopayWalletSeller = (
-      await prisma.mangopay_mangopaywallet.findFirst({
-        where: { cod: user.data.cod },
-      })
-    )?.wallet_id;
-
-    if (!buyer.cod)
-      return res.status(400).json({ error: "Cod no asignado al usuario" });
-    mangopayIdBuyer = (
-      await prisma.mangopay_mangopayuser.findFirst({
-        where: { cod: buyer.cod },
-      })
-    )?.mangopay_id;
-    mangopayWalletBuyer = (
-      await prisma.mangopay_mangopaywallet.findFirst({
-        where: { cod: buyer.cod },
-      })
-    )?.wallet_id;
-
-    console.log(
-      mangopayIdBuyer,
-      "ID  buyer",
-      mangopayIdSeller,
-      "ID seller",
-      mangopayWalletBuyer,
-      "wallet buyer",
-      mangopayWalletSeller,
-      "wallet seller"
-    );
-    let myTransfer = {
-      AuthorId: mangopayIdBuyer,
-      Tag: "Created using Mangopay NodeJS SDK",
-      CreditedUserId: mangopayIdSeller,
-      DebitedFunds: {
-        Currency: "EUR",
-        Amount: order.precio_total,
-      },
-      Fees: {
-        Currency: "EUR",
-        Amount: 0,
-      },
-      DebitedWalletId: mangopayWalletBuyer,
-      CreditedWalletId: mangopayWalletSeller,
-    };
-
-    const createTransfer = async (
-      myTransfer: mangopayInstance.transfer.CreateTransfer
-    ) => {
-      try {
-        const response = await mangopay.Transfers.create(myTransfer);
-        console.log(response);
-        return response;
-      } catch (err) {
-        console.log(err);
-        return false;
-      }
-    };
-    try {
-      //@ts-ignore
-      const transferResponse = await createTransfer(myTransfer);
-      if (!transferResponse || transferResponse.Status != "SUCCEEDED")
-        return res.status(400).json({ error: "Transferencia ha fallado" });
-    } catch (e) {
-      console.log(e);
-      return res.status(500).json(e);
-    }
-    try {
-      if (!order.participacion_id)
-        return res
-          .status(404)
-          .json({ error: "Participacion id no encontrada" });
-      const participacion = await prisma.participacion.findUnique({
-        where: { id: order.participacion_id },
-      });
-      if (!participacion)
-        return res.status(404).json({ error: "Participacion no encontrada" });
-      if (!cuenta)
-        return res.status(404).json({ error: "Cuenta no encontrada" });
-      const document = await createDocReVenta(
-        user.data,
-        buyer,
-        participacion,
-        cuenta,
-        prisma
-      );
-      console.log("doc", document);
-      if (!document || !document.id)
-        return res.status(500).json({ error: "Error al crear documento" });
-      // guardar particpacion en historial y asignar a nuevo comprador
-      order = await prisma.orders.update({
-        where: { id: order.id },
-        data: {
-          status: "PENDIENTE_FIRMA",
-          documentId_first: document.documents[0].id,
-          documentId_second: document.documents[1].id,
-          signatureId: document.id,
-        },
-      });
-    } catch (e) {
-      console.log(e);
-      return res.status(400).json(e);
-    }
-    res.json(order);
   } catch (e) {
     console.log(e);
     res.status(500).json(e);

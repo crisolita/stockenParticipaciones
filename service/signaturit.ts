@@ -261,3 +261,69 @@ export const createDocReVenta = async (
     return false;
   }
 };
+
+export const createDocNotaConvertible = async (
+  seller: users_user,
+  buyer: users_user,
+  participacion: participacion,
+  cuenta: cuentas_participes,
+  prisma: PrismaClient
+) => {
+  try {
+    let plantilla = fs.readFileSync("reventaDoc.html", "utf-8");
+    let fiscalresidenceBuyer, fiscalresidenceSeller;
+
+    fiscalresidenceBuyer = await prisma.users_fiscalresidence.findFirst({
+      where: { user_id: buyer.id },
+    });
+
+    fiscalresidenceSeller = await prisma.users_fiscalresidence.findFirst({
+      where: { user_id: seller.id },
+    });
+    const data = {
+      fecha_anterior: participacion.buy_date,
+      localidad: `España`,
+      fecha: "Fecha de hyo",
+      fullname_seller: `${seller.first_name} ${seller.last_name}`,
+      edo_seller: seller.marital_status,
+      num_dni_seller: seller.id_document_number,
+      domicilio_seller: `${fiscalresidenceSeller?.street_address} ${fiscalresidenceSeller?.state} ${fiscalresidenceSeller?.city} ${fiscalresidenceSeller?.postal_code} ${fiscalresidenceSeller?.country}`,
+      email_seller: seller.email,
+      fullname_buyer: `${buyer.first_name} ${buyer.last_name}`,
+      edo_buyer: buyer.marital_status,
+      buyer_dni: buyer.id_document_number,
+      buyer_domicilio: `${fiscalresidenceBuyer?.street_address} ${fiscalresidenceBuyer?.state} ${fiscalresidenceBuyer?.city} ${fiscalresidenceBuyer?.postal_code} ${fiscalresidenceBuyer?.country}`,
+      buyer_email: buyer.email,
+      cuenta_descripcion: cuenta.descripcion,
+    };
+    console.log("llegue aqui");
+    // Ajusta las opciones según tus necesidades
+    fs.writeFileSync("reventaDocMaq.html", mustache.render(plantilla, data));
+    const created = fs.readFileSync("reventaDocMaq.html", "utf-8");
+    pdf
+      .create(created)
+      .toFile("reventa.pdf", (err: any, res: { filename: any }) => {
+        if (err) return console.log(err);
+        console.log("PDF creado exitosamente en", res.filename);
+      });
+    const document = await client.createSignature("reventa.pdf", [
+      {
+        name: seller.first_name,
+        email: seller.email,
+        role: "Signer 1",
+        delivery_type: "url",
+      },
+      {
+        name: buyer.first_name,
+        email: buyer.email,
+        role: "Signer 2",
+        delivery_type: "url",
+      },
+    ]);
+    console.log(document);
+    return document;
+  } catch (e) {
+    console.log(e);
+    return false;
+  }
+};

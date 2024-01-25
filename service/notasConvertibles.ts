@@ -16,6 +16,8 @@ export const crearVentaNotaConvertible = async (
     floor?: string;
     fecha_devolucion?: Date;
     negociar: boolean;
+    creador_id: number;
+    cantidad_restante: number;
   },
   prisma: PrismaClient
 ) => {
