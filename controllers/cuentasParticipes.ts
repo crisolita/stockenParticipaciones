@@ -944,7 +944,7 @@ export const comprarParticipacionPorOrden = async (
         await prisma.mangopay_mangopayuser.findFirst({
           where: { cod: user.data.cod },
         })
-      )?.id;
+      )?.mangopay_id;
     }
     const cuenta = await prisma.cuentas_participes.findUnique({
       where: { id: order.cuenta_participe_id },
@@ -953,7 +953,7 @@ export const comprarParticipacionPorOrden = async (
       return res
         .status(404)
         .json({ error: "No hay datos de mangopay suficientes" });
-
+    console.log(mangopayIdBuyer, mangopayWalletBuyer, "info mangopaay");
     const fiscalresidence = await prisma.users_fiscalresidence.findFirst({
       where: { user_id: user.data.id },
     });
