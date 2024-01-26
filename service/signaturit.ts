@@ -289,6 +289,41 @@ export const textoClienteEmpresa = (
 ) => {
   return `${company.social_denomination}, sociedad de responsabilidad limitada, provista de N.I.F. ${company.cif}, con domicilio social en ${company.city}  y correo electrónico ${user.email} (en adelante, el “Prestamista”), representada en este acto por ${user.first_name} ${user.last_name} en su condición de ${company.governing_bodies_legal_representative_position}. `;
 };
+export const floor = (floor: string, floor_cifra: number) => {
+  return `Valoración mínima de referencia (“Floor”) 
+  En cualquier caso, la valoración resultante mínima de referencia que resultará aplicable (también denominada “Floor”) para la conversión, no podrá ser inferior a ${floor} euros (${floor_cifra} €).
+  La conversión tendrá lugar con carácter inmediatamente anterior a la ejecución de la ampliación que la haya motivado.`;
+};
+export const devolucion = (
+  devol: boolean,
+  numero_meses: number,
+  numero_meses_string: string
+) => {
+  return devol
+    ? `DEVOLUCIÓN.
+  El Prestamista concede a la Sociedad una carencia de ${numero_meses_string} (${numero_meses}) meses a contar desde la fecha de firma del presente Contrato para la devolución del principal y en el pago de los intereses del Préstamo. 
+  A la fecha de vencimiento del referido periodo de carencia, siempre y cuando el Prestamista no haya comunicado su intención de capitalizar el Préstamo, la Sociedad deberá pagar al Prestamista,
+  mediante pago único, el principal con adición de los intereses devengados conforme a la cláusula 3 anterior.`
+    : `Dada la naturaleza del Préstamo, la Sociedad no lo podrá amortizar anticipadamente, ya sea de forma parcial o total, excepto que la amortización se haga mediante la conversión del Préstamo en participaciones de la Sociedad, de acuerdo con lo dispuesto en la Cláusula 5.`;
+};
+export const amortizacion = (
+  descuento: boolean,
+  importe_cap_letras: string,
+  importe_cap_cifra: number,
+  porcentaje_string?: number | null
+) => {
+  return descuento
+    ? `En caso de que la conversión del Préstamo (principal + intereses devengados) tenga lugar en el marco de una ronda de inversión cualificada de la Operación de Financiación, de al menos ${importe_cap_letras} euros (${importe_cap_cifra}.-€),
+    la Prestamista convertirá el importe del Préstamo en capital social de la Sociedad por el número de participaciones que resulte de valorar la Sociedad a la valoración más baja entre:
+
+    A) La valoración final de la ronda de inversión en curso, después de aplicar un descuento de  ${porcentaje_string} (X%) anual, respecto del valor final de la ronda de inversión, calculado día a día entre la fecha del desembolso del importe de este Préstamo y el día de cierre de la ronda de inversión ; y 
+    
+    B) Una valoración máxima de  ${importe_cap_letras} euros (${importe_cap_cifra}.-€) (“CAP”).`
+    : `
+    En caso de que la conversión del Préstamo (principal + intereses devengados) tenga lugar en el marco de una ronda de inversión cualificada de la Operación de Financiación, de al menos IMPORTE RONDA LETRAS euros (IMPORTE RONDA CIFRAS.-€).
+    
+    En todo caso, si tras calcular la valoración pre-money de la Sociedad tomando como precio por participación el calculado conforme al párrafo anterior, ésta fuese superior a ${importe_cap_letras} euros (${importe_cap_cifra}.-€) el Préstamo (principal+ intereses devengados) se capitalizará a dicha valoración (“CAP”).)`;
+};
 export const createDocNotaConvertible = async (
   seller: users_user,
   buyer: users_user,
@@ -327,9 +362,20 @@ export const createDocNotaConvertible = async (
       importe_ronda_cifra: "",
       importe_cap_no_ronda: venta.CAP_no_ronda,
       importe_cap_no_ronda_cifra: "",
-      Amortizacion: "",
-      floor: "",
-      Devolucion: "",
+      Amortizacion: amortizacion(
+        venta.tasa_descuento ? true : false,
+        "importe_cap",
+        33,
+        venta.tasa_descuento
+      ),
+      floor: venta.floor ? floor(venta.floor, Number(venta.floor)) : "",
+      Devolucion: devolucion(
+        venta.fecha_devolucion ? true : false,
+        new Date(
+          venta.fecha_devolucion ? venta.fecha_devolucion : ""
+        ).getMonth(),
+        "meses en letra"
+      ),
     };
     // Ajusta las opciones según tus necesidades
     fs.writeFileSync(

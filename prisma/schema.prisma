@@ -1356,7 +1356,6 @@ model cuentas_participes {
   fecha_lanzamiento   DateTime
   companyIDSeller Int
   liquidacion String
-  
   clausulas   String?
   mangopay_transfers mangopay_mangopaytransfer_cuenta_participe[]
   users_user          users_user     @relation(fields: [creator_id], references: [id])

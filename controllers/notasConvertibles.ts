@@ -358,6 +358,15 @@ export const aceptarCompraNotaConvertible = async (
     });
 
     if (!buyer) return res.status(400).json({ error: "Comprador no valido" });
+
+    const fiscalresidenceBuyer = await prisma.users_fiscalresidence.findFirst({
+      where: { user_id: buyer.id },
+    });
+    if (!fiscalresidenceBuyer)
+      return res
+        .status(400)
+        .json({ error: "No hay residencia fiscal del comprados" });
+
     let desbloqueoSaldo;
     // / DESBLOQUEAR SALDO MANGOPAY Y ENVIARSELO A VENDEDOR
 
@@ -379,146 +388,123 @@ export const aceptarCompraNotaConvertible = async (
       return res.status(500).json({ error: "Error desbloqueando el saldo" });
     }
     // console.log("QEEEE LOCOO");
-    // /// transferencia de mangopay de buyer a seller
-    // let mangopayIdBuyer,
-    //   mangopayIdSeller,
-    //   mangopayWalletBuyer,
-    //   mangopayWalletSeller;
-    // mangopayIdSeller = (
-    //   await prisma.mangopay_mangopayuser.findFirst({
-    //     where: { cod: company.cod },
-    //   })
-    // )?.mangopay_id;
-    // mangopayWalletSeller = (
-    //   await prisma.mangopay_mangopaywallet.findFirst({
-    //     where: { cod: company.cod },
-    //   })
-    // )?.wallet_id;
-    // if (order.companyIdBuyer) {
-    //   const companyBuyer = await prisma.companies_company.findUnique({
-    //     where: { id: order.companyIdBuyer },
-    //   });
-    //   if (!companyBuyer || !companyBuyer.cod)
-    //     return res
-    //       .status(400)
-    //       .json({ error: "Compañia de comprados no valida" });
-    //   mangopayIdBuyer = (
-    //     await prisma.mangopay_mangopayuser.findFirst({
-    //       where: { cod: companyBuyer.cod },
-    //     })
-    //   )?.mangopay_id;
-    //   mangopayWalletBuyer = (
-    //     await prisma.mangopay_mangopaywallet.findFirst({
-    //       where: { cod: companyBuyer.cod },
-    //     })
-    //   )?.wallet_id;
-    // } else {
-    //   if (!buyer.cod)
-    //     return res.status(400).json({ error: "Cod no asignado al usuario" });
-    //   mangopayIdBuyer = (
-    //     await prisma.mangopay_mangopayuser.findFirst({
-    //       where: { cod: buyer.cod },
-    //     })
-    //   )?.mangopay_id;
-    //   mangopayWalletBuyer = (
-    //     await prisma.mangopay_mangopaywallet.findFirst({
-    //       where: { cod: buyer.cod },
-    //     })
-    //   )?.wallet_id;
-    // }
-    // console.log(
-    //   mangopayIdBuyer,
-    //   "ID  buyer",
-    //   mangopayIdSeller,
-    //   "ID seller",
-    //   mangopayWalletBuyer,
-    //   "wallet buyer",
-    //   mangopayWalletSeller,
-    //   "wallet seller"
-    // );
-    // let myTransfer = {
-    //   AuthorId: mangopayIdBuyer,
-    //   Tag: "Created using Mangopay NodeJS SDK",
-    //   CreditedUserId: mangopayIdSeller,
-    //   DebitedFunds: {
-    //     Currency: "EUR",
-    //     Amount: order.precio_total * 100,
-    //   },
-    //   Fees: {
-    //     Currency: "EUR",
-    //     Amount: 0,
-    //   },
-    //   DebitedWalletId: mangopayWalletBuyer,
-    //   CreditedWalletId: mangopayWalletSeller,
-    // };
+    /// transferencia de mangopay de buyer a seller
+    let mangopayIdBuyer,
+      mangopayIdSeller,
+      mangopayWalletBuyer,
+      mangopayWalletSeller;
+    mangopayIdSeller = (
+      await prisma.mangopay_mangopayuser.findFirst({
+        where: { cod: company.cod },
+      })
+    )?.mangopay_id;
+    mangopayWalletSeller = (
+      await prisma.mangopay_mangopaywallet.findFirst({
+        where: { cod: company.cod },
+      })
+    )?.wallet_id;
+    if (order.companyIdBuyer) {
+      const companyBuyer = await prisma.companies_company.findUnique({
+        where: { id: order.companyIdBuyer },
+      });
+      if (!companyBuyer || !companyBuyer.cod)
+        return res
+          .status(400)
+          .json({ error: "Compañia de comprados no valida" });
+      mangopayIdBuyer = (
+        await prisma.mangopay_mangopayuser.findFirst({
+          where: { cod: companyBuyer.cod },
+        })
+      )?.mangopay_id;
+      mangopayWalletBuyer = (
+        await prisma.mangopay_mangopaywallet.findFirst({
+          where: { cod: companyBuyer.cod },
+        })
+      )?.wallet_id;
+    } else {
+      if (!buyer.cod)
+        return res.status(400).json({ error: "Cod no asignado al usuario" });
+      mangopayIdBuyer = (
+        await prisma.mangopay_mangopayuser.findFirst({
+          where: { cod: buyer.cod },
+        })
+      )?.mangopay_id;
+      mangopayWalletBuyer = (
+        await prisma.mangopay_mangopaywallet.findFirst({
+          where: { cod: buyer.cod },
+        })
+      )?.wallet_id;
+    }
+    console.log(
+      mangopayIdBuyer,
+      "ID  buyer",
+      mangopayIdSeller,
+      "ID seller",
+      mangopayWalletBuyer,
+      "wallet buyer",
+      mangopayWalletSeller,
+      "wallet seller"
+    );
+    let myTransfer = {
+      AuthorId: mangopayIdBuyer,
+      Tag: "Created using Mangopay NodeJS SDK",
+      CreditedUserId: mangopayIdSeller,
+      DebitedFunds: {
+        Currency: "EUR",
+        Amount: order.precio_total * 100,
+      },
+      Fees: {
+        Currency: "EUR",
+        Amount: 0,
+      },
+      DebitedWalletId: mangopayWalletBuyer,
+      CreditedWalletId: mangopayWalletSeller,
+    };
 
-    // const createTransfer = async (
-    //   myTransfer: mangopayInstance.transfer.CreateTransfer
-    // ) => {
-    //   try {
-    //     const response = await mangopay.Transfers.create(myTransfer);
-    //     console.log(response);
-    //     return response;
-    //   } catch (err) {
-    //     console.log(err);
-    //     return false;
-    //   }
-    // };
-    // try {
-    //   // @ts-ignore
-    //   const transferResponse = await createTransfer(myTransfer);
-    //   if (!transferResponse || transferResponse.Status != "SUCCEEDED")
-    //     return res.status(400).json({ error: "Transferencia ha fallado" });
-    /// crear yun modelo para este registro aparte
-    // const transaction = await prisma.mangopay_basemangopaytransaction.create({
-    //   data: {
-    //     created: new Date(transferResponse.CreationDate),
-    //     modified: new Date(transferResponse.ExecutionDate),
-    //     transaction_id: transferResponse.Id,
-    //     status: transferResponse.Status,
-    //     amount: transferResponse.DebitedFunds.Amount,
-    //     currency: transferResponse.DebitedFunds.Currency,
-    //     fees: transferResponse.Fees.Amount,
-    //     cod: transferResponse.ResultCode,
-    //   },
-    // });
-    // await prisma.mangopay_mangopaytransfer_cuenta_participe.create({
-    //   data: {
-    //     from_user_id: buyer.id,
-    //     to_user_id: user.data.id,
-    //     basemangopaytransaction_ptr_id: transaction.id,
-    //     from_cod: buyer.cod,
-    //     to_cod: company.cod,
-    //     total_amount: transaction.amount,
-    //     cuenta_participe_id: cuenta.id,
-    //   },
-    // });
-    // } catch (e) {
-    //   console.log(e);
-    //   return res.status(500).json(e);
-    // }
+    const createTransfer = async (
+      myTransfer: mangopayInstance.transfer.CreateTransfer
+    ) => {
+      try {
+        const response = await mangopay.Transfers.create(myTransfer);
+        console.log(response);
+        return response;
+      } catch (err) {
+        console.log(err);
+        return false;
+      }
+    };
+    try {
+      // @ts-ignore
+      const transferResponse = await createTransfer(myTransfer);
+      if (!transferResponse || transferResponse.Status != "SUCCEEDED")
+        return res.status(400).json({ error: "Transferencia ha fallado" });
+    } catch (e) {
+      console.log(e);
+      return res.status(500).json(e);
+    }
     try {
       console.log("Hola");
-      // const document = await createDocNotaConvertible(
-      //   order,
-      //   cuenta,
-      //   buyer,
-      //   user.data,
-      //   company,
-      //   prisma
-      // );
-      // console.log("doc", document);
-      // if (!document || !document.id)
-      //   return res.status(500).json({ error: "Error al crear documento" });
-      // order = await prisma.orderNotaConvertible.update({
-      //   where: { id: order.id },
-      //   data: {
-      //     signature_id: document.id,
-      //     document_id_first: document.documents[0].id,
-      //     document_id_second: document.documents[1].id,
-      //     status: "PENDIENTE_FIRMA",
-      //   },
-      // });
+      const document = await createDocNotaConvertible(
+        user.data,
+        buyer,
+        fiscalresidenceBuyer,
+        order,
+        company,
+        venta,
+        prisma
+      );
+      console.log("doc", document);
+      if (!document || !document.id)
+        return res.status(500).json({ error: "Error al crear documento" });
+      order = await prisma.orderNotaConvertible.update({
+        where: { id: order.id },
+        data: {
+          signature_id: document.id,
+          document_id_first: document.documents[0].id,
+          document_id_second: document.documents[1].id,
+          status: "PENDIENTE_FIRMA",
+        },
+      });
     } catch (e) {
       console.log(e);
       return res.status(400).json(e);
