@@ -5,6 +5,7 @@ import Joivalidator from "express-joi-validation";
 import { crearVentaNotaConvertible } from "../service/notasConvertibles";
 import {
   aceptarCompraNotaConvertible,
+  comprarNotaConvertible,
   crearNotaConvertible,
   rechazarCompraNotaConvertible,
   signCompraDoc,
@@ -13,7 +14,7 @@ const validator = Joivalidator.createValidator();
 
 const router = express.Router();
 router.post("/crearVentaDeNotaConvertible", crearNotaConvertible);
-router.post("/comprarCuentaParticipe");
+router.post("/comprarNota", comprarNotaConvertible);
 router.post("/rechazarOrdenNC", rechazarCompraNotaConvertible);
 router.post("/aceptarOrdenNC", aceptarCompraNotaConvertible);
 router.post("/signDocNC", signCompraDoc);
