@@ -257,8 +257,14 @@ export const createDocReVenta = async (
     // Ajusta las opciones según tus necesidades
     fs.writeFileSync("reventaDocMaq.html", mustache.render(plantilla, data));
     const created = fs.readFileSync("reventaDocMaq.html", "utf-8");
+    const options = {
+      border: {
+        top: "0.5in",
+        bottom: "0.5in",
+      },
+    };
     const pdfPromise = new Promise((resolve, reject) => {
-      pdf.create(created).toFile("reventa.pdf", (err, res) => {
+      pdf.create(created, options).toFile("reventa.pdf", (err, res) => {
         if (err) reject(err);
         else resolve(res);
       });
@@ -395,8 +401,14 @@ export const createDocNotaConvertible = async (
       mustache.render(plantilla, data)
     );
     const created = fs.readFileSync("venta_nota_maqueta.html", "utf-8");
+    const options = {
+      border: {
+        top: "0.5in",
+        bottom: "0.5in",
+      },
+    };
     const pdfPromise = new Promise((resolve, reject) => {
-      pdf.create(created).toFile("venta_nota.pdf", (err, res) => {
+      pdf.create(created, options).toFile("venta_nota.pdf", (err, res) => {
         if (err) reject(err);
         else resolve(res);
       });
