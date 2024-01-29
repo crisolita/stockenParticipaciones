@@ -661,7 +661,7 @@ export const asignarNota = async (req: Request, res: Response) => {
   });
 
   const document = await createDocNotaConvertible(
-    user.data.id,
+    user.data,
     buyer,
     fiscalresidenceBuyer,
     order,
