@@ -1409,6 +1409,7 @@ model participacion {
   owner_id           Int
   signature_id String
   buy_date DateTime
+  cesion_is_allowed Boolean?
   records record_participaciones[]
   users_user         users_user         @relation(fields: [owner_id], references: [id])
   cuentas_participes cuentas_participes @relation(fields: [cuenta_participe_id], references: [id])

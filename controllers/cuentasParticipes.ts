@@ -415,8 +415,19 @@ export const verOrdenesByBuyer = async (req: Request, res: Response) => {
     const porFirmarComprador = await prisma.orders.findMany({
       where: { buyerID: user.data.id, status: "PENDIENTE_FIRMA" },
     });
-
-    return res.json({ saldoBloqueado, finalizadas, porFirmarComprador });
+    let participaciones = await prisma.participacion.findMany({
+      where: { owner_id: user.data.id },
+    });
+    let rechazadas = await prisma.orders.findMany({
+      where: { buyerID: user.data.id, status: "RECHAZADA" },
+    });
+    return res.json({
+      saldoBloqueado,
+      finalizadas,
+      porFirmarComprador,
+      participaciones,
+      rechazadas,
+    });
   } catch (e) {
     res.status(500).json(e);
   }
@@ -718,6 +729,7 @@ export const signCompraDoc = async (req: Request, res: Response) => {
           document_id_second: order.documentId_second,
           signature_id: order.signatureId,
           monto_pagado: order.precio_total,
+          cesion_is_allowed: cuenta.cesion,
         },
       });
     } else {
@@ -730,6 +742,7 @@ export const signCompraDoc = async (req: Request, res: Response) => {
           document_id_second: order.documentId_second,
           signature_id: order.signatureId,
           owner_id: buyer.id,
+          cesion_is_allowed: cuenta.cesion,
           buy_date: new Date(),
         },
       });
@@ -818,6 +831,83 @@ export const rechazarComprasCuentaParticipe = async (
     res.status(500).json(e);
   }
 };
+export const asginarCtaParticipe = async (req: Request, res: Response) => {
+  // @ts-ignore
+  const prisma = req.prisma as PrismaClient;
+  const {
+    jwtCreador,
+    cuenta_participe_id,
+    cantidad,
+    companyIdSeller,
+    user_id,
+    companyIdBuyer,
+  } = req.body;
+  let user;
+  try {
+    user = await axios.get("https://pro.stockencapital.com/api/v1/users/me/", {
+      headers: {
+        Authorization: `${jwtCreador}`,
+      },
+    });
+    if (!user || user.data.status != "validated")
+      return res.status(400).json({ error: "Usuario no valido" });
+  } catch (e) {
+    console.log(e);
+    return res.status(500).json({ error: "Error al validar usuario" });
+  }
+  const cuenta = await prisma.cuentas_participes.findUnique({
+    where: { id: cuenta_participe_id },
+  });
+  if (!cuenta)
+    return res
+      .status(404)
+      .json({ error: "No se ha encontrado cuenta participe" });
+  const companyBuyer = await prisma.companies_company.findUnique({
+    where: { id: companyIdBuyer },
+  });
+  const companySeller = await prisma.companies_company.findUnique({
+    where: { id: companyIdSeller },
+  });
+  if (!companyBuyer || companyBuyer.legal_representative_id != user.data.id)
+    return res
+      .status(400)
+      .json({ error: "Empresa vendedor no valida o no pertenece al usuario" });
+  if (!companySeller || companySeller.legal_representative_id != user_id)
+    return res
+      .status(400)
+      .json({ error: "Empresa receptor no valida o no pertenece al usuario" });
+  let order = await prisma.orders.create({
+    data: {
+      precio_total: 0,
+      cantidad: cantidad,
+      cuenta_participe_id: cuenta.id,
+      buyerID: user_id,
+      sellerID: user.data,
+      companyIdSeller: companyIdSeller,
+      status: "PENDIENTE_FIRMA",
+      companyIdBuyer: companyIdBuyer,
+      create_date: new Date(),
+    },
+  });
+  const buyer = await prisma.users_user.findUnique({ where: { id: user_id } });
+  if (!buyer) return res.status(400).json({ error: "Usuario no encontrado" });
+  const document = await createSignature(
+    order,
+    cuenta,
+    buyer,
+    user.data,
+    companySeller,
+    prisma
+  );
+  order = await prisma.orders.update({
+    where: { id: order.id },
+    data: {
+      documentId_first: document.documents[0].id,
+      documentId_second: document.documents[1].id,
+      signatureId: document.id,
+    },
+  });
+};
 
 /// marketplace entre usuario
 export const crearVentaDeParticipacion = async (
@@ -852,6 +942,10 @@ export const crearVentaDeParticipacion = async (
       return res
         .status(400)
         .json({ error: "Participacion no pertenece al usuario" });
+    if (!participacion.cesion_is_allowed)
+      return res
+        .status(400)
+        .json({ error: "Participacion no puede ser vendida" });
     let mangopayWallet, mangopayId;
     if (companyIDSeller) {
       const company = await prisma.companies_company.findUnique({
