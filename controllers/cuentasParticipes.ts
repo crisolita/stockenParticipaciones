@@ -879,7 +879,7 @@ export const asignarCtaParticipe = async (req: Request, res: Response) => {
       cantidad: cantidad,
       cuenta_participe_id: cuenta.id,
       buyerID: user_id,
-      sellerID: user.data,
+      sellerID: user.data.id,
       companyIdSeller: cuenta.companyIDSeller,
       status: "PENDIENTE_FIRMA",
       companyIdBuyer: companyIdBuyer,
