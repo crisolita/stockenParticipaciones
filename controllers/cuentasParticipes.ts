@@ -856,18 +856,19 @@ export const asignarCtaParticipe = async (req: Request, res: Response) => {
     return res
       .status(404)
       .json({ error: "No se ha encontrado cuenta participe" });
-  const companyBuyer = await prisma.companies_company.findUnique({
-    where: { id: companyIdBuyer },
-  });
+  if (companyIdBuyer) {
+    const companyBuyer = await prisma.companies_company.findUnique({
+      where: { id: companyIdBuyer },
+    });
+    if (!companyBuyer || companyBuyer.legal_representative_id != user_id)
+      return res.status(400).json({
+        error: "Empresa vendedor no valida o no pertenece al usuario",
+      });
+  }
   const companySeller = await prisma.companies_company.findUnique({
     where: { id: cuenta.companyIDSeller },
   });
   if (!companySeller || companySeller.legal_representative_id != user.data.id)
-    return res
-      .status(400)
-      .json({ error: "Empresa vendedor no valida o no pertenece al usuario" });
-
-  if (!companyBuyer || companyBuyer.legal_representative_id != user_id)
     return res
       .status(400)
       .json({ error: "Empresa vendedor no valida o no pertenece al usuario" });
