@@ -297,6 +297,8 @@ export const verOrdenesBySell = async (req: Request, res: Response) => {
     let saldoBloqueado = [];
     let finalizadas = [];
     let porFirmarVendedor = [];
+    let ventasActivas = [];
+
     saldoBloqueado.push(
       await prisma.orders.findMany({
         where: {
@@ -324,8 +326,22 @@ export const verOrdenesBySell = async (req: Request, res: Response) => {
         },
       })
     );
+    ventasActivas.push(
+      await prisma.orders.findMany({
+        where: {
+          sellerID: user.data.id,
+          status: "VENTA_ACTIVA",
+          companyIdSeller: companyId,
+        },
+      })
+    );
 
-    return res.json({ saldoBloqueado, finalizadas, porFirmarVendedor });
+    return res.json({
+      saldoBloqueado,
+      finalizadas,
+      porFirmarVendedor,
+      ventasActivas,
+    });
   } catch (e) {
     res.status(500).json(e);
   }
