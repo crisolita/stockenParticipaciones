@@ -834,14 +834,8 @@ export const rechazarComprasCuentaParticipe = async (
 export const asignarCtaParticipe = async (req: Request, res: Response) => {
   // @ts-ignore
   const prisma = req.prisma as PrismaClient;
-  const {
-    jwtCreador,
-    cuenta_participe_id,
-    cantidad,
-    companyIdSeller,
-    user_id,
-    companyIdBuyer,
-  } = req.body;
+  const { jwtCreador, cuenta_participe_id, cantidad, user_id, companyIdBuyer } =
+    req.body;
   let user;
   try {
     user = await axios.get("https://pro.stockencapital.com/api/v1/users/me/", {
@@ -866,16 +860,18 @@ export const asignarCtaParticipe = async (req: Request, res: Response) => {
     where: { id: companyIdBuyer },
   });
   const companySeller = await prisma.companies_company.findUnique({
-    where: { id: companyIdSeller },
+    where: { id: cuenta.companyIDSeller },
   });
-  if (!companyBuyer || companyBuyer.legal_representative_id != user.data.id)
+  if (!companySeller || companySeller.legal_representative_id != user.data.id)
     return res
       .status(400)
       .json({ error: "Empresa vendedor no valida o no pertenece al usuario" });
-  if (!companySeller || companySeller.legal_representative_id != user_id)
+
+  if (!companyBuyer || companyBuyer.legal_representative_id != user_id)
     return res
       .status(400)
-      .json({ error: "Empresa receptor no valida o no pertenece al usuario" });
+      .json({ error: "Empresa vendedor no valida o no pertenece al usuario" });
+
   let order = await prisma.orders.create({
     data: {
       precio_total: 0,
@@ -883,7 +879,7 @@ export const asignarCtaParticipe = async (req: Request, res: Response) => {
       cuenta_participe_id: cuenta.id,
       buyerID: user_id,
       sellerID: user.data,
-      companyIdSeller: companyIdSeller,
+      companyIdSeller: cuenta.companyIDSeller,
       status: "PENDIENTE_FIRMA",
       companyIdBuyer: companyIdBuyer,
       create_date: new Date(),
