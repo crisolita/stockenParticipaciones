@@ -896,6 +896,8 @@ export const asignarCtaParticipe = async (req: Request, res: Response) => {
     companySeller,
     prisma
   );
+  if (!document || !document.id)
+    return res.status(500).json({ error: "Error al crear documento" });
   order = await prisma.orders.update({
     where: { id: order.id },
     data: {

@@ -669,6 +669,8 @@ export const asignarNota = async (req: Request, res: Response) => {
     venta,
     prisma
   );
+  if (!document || !document.id)
+    return res.status(500).json({ error: "Error al crear documento" });
   order = await prisma.orderNotaConvertible.update({
     where: { id: order.id },
     data: {
