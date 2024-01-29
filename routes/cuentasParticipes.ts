@@ -2,6 +2,7 @@ import express from "express";
 import Joivalidator from "express-joi-validation";
 import {
   aceptarComprasCuentaParticipe,
+  asignarCtaParticipe,
   comprarParticipacion,
   comprarParticipacionPorOrden,
   crearCuentaParticipe,
@@ -30,6 +31,8 @@ router.post("/verOrdenesBySell", verOrdenesBySell);
 router.post("/verOrdenesByBuyer", verOrdenesByBuyer);
 
 router.post("/verCuentasParticipes", verCuentasParticipes);
+
+router.post("/asignarCuenta", asignarCtaParticipe);
 
 //// MARKETPLACE
 

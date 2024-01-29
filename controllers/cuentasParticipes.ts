@@ -831,7 +831,7 @@ export const rechazarComprasCuentaParticipe = async (
     res.status(500).json(e);
   }
 };
-export const asginarCtaParticipe = async (req: Request, res: Response) => {
+export const asignarCtaParticipe = async (req: Request, res: Response) => {
   // @ts-ignore
   const prisma = req.prisma as PrismaClient;
   const {
@@ -907,6 +907,7 @@ export const asginarCtaParticipe = async (req: Request, res: Response) => {
       signatureId: document.id,
     },
   });
+  return res.json({ order, document });
 };
 
 /// marketplace entre usuario
