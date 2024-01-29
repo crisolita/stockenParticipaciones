@@ -162,16 +162,25 @@ export const createSignature = async (
       Client_aporte: order.precio_total,
       Clausulas: cuenta.clausulas,
     };
-    console.log("llegue aqui");
+    const options = {
+      border: {
+        top: "0.5in",
+        bottom: "0.5in",
+      },
+    };
     // Ajusta las opciones según tus necesidades
     fs.writeFileSync("createdCP.html", mustache.render(plantilla, data));
     const created = fs.readFileSync("createdCP.html", "utf-8");
-    pdf
-      .create(created)
-      .toFile("crearCP.pdf", (err: any, res: { filename: any }) => {
-        if (err) return console.log(err);
-        console.log("PDF creado exitosamente en", res.filename);
+    const pdfPromise = new Promise((resolve, reject) => {
+      pdf.create(created, options).toFile("crearCP.pdf", (err, res) => {
+        if (err) reject(err);
+        else resolve(res);
       });
+    });
+
+    const resultado = await pdfPromise;
+
+    console.log(resultado, "Soy undefinde?");
     const document = await client.createSignature("crearCP.pdf", [
       {
         name: creador.first_name,
@@ -186,7 +195,7 @@ export const createSignature = async (
         delivery_type: "url",
       },
     ]);
-    console.log(document);
+    console.log(document, "os");
     return document;
   } catch (e) {
     console.log(e);
@@ -248,12 +257,15 @@ export const createDocReVenta = async (
     // Ajusta las opciones según tus necesidades
     fs.writeFileSync("reventaDocMaq.html", mustache.render(plantilla, data));
     const created = fs.readFileSync("reventaDocMaq.html", "utf-8");
-    pdf
-      .create(created)
-      .toFile("reventa.pdf", (err: any, res: { filename: any }) => {
-        if (err) return console.log(err);
-        console.log("PDF creado exitosamente en", res.filename);
+    const pdfPromise = new Promise((resolve, reject) => {
+      pdf.create(created).toFile("reventa.pdf", (err, res) => {
+        if (err) reject(err);
+        else resolve(res);
       });
+    });
+
+    const resultado = await pdfPromise;
+    console.log(resultado);
     const document = await client.createSignature("reventa.pdf", [
       {
         name: seller.first_name,
@@ -383,12 +395,15 @@ export const createDocNotaConvertible = async (
       mustache.render(plantilla, data)
     );
     const created = fs.readFileSync("venta_nota_maqueta.html", "utf-8");
-    pdf
-      .create(created)
-      .toFile("venta_nota.pdf", (err: any, res: { filename: any }) => {
-        if (err) return console.log(err);
-        console.log("PDF creado exitosamente en", res.filename);
+    const pdfPromise = new Promise((resolve, reject) => {
+      pdf.create(created).toFile("venta_nota.pdf", (err, res) => {
+        if (err) reject(err);
+        else resolve(res);
       });
+    });
+
+    const resultado = await pdfPromise;
+    console.log(resultado);
     const document = await client.createSignature("venta_nota.pdf", [
       {
         name: seller.first_name,

@@ -238,7 +238,7 @@ export const rechazarCompraNotaConvertible = async (
   try {
     // @ts-ignore
     const prisma = req.prisma as PrismaClient;
-    const { jwtCreador, companyID, orderId } = req.body;
+    const { jwtCreador, orderId } = req.body;
     const user = await axios.get(
       "https://pro.stockencapital.com/api/v1/users/me/",
       {
@@ -249,19 +249,9 @@ export const rechazarCompraNotaConvertible = async (
     );
     if (!user || user.data.status != "validated")
       return res.status(400).json({ error: "Usuario no valido" });
-    const company = await prisma.companies_company.findUnique({
-      where: { id: companyID },
-    });
-    if (
-      !company ||
-      company.legal_representative_id != user.data.id ||
-      company.status != "validated"
-    )
-      return res.status(400).json({
-        error: "Compañia no existe, no pertenece al usuario o no esta validada",
-      });
+
     let order = await prisma.orderNotaConvertible.findUnique({
-      where: { id: orderId, status: "SALDO_BLOQUEADO" },
+      where: { id: orderId, status: "SALDO_BLOQUEADO", sellerId: user.data.id },
     });
     if (!order || order.sellerId != user.data.id || !order.buyerId)
       return res.status(400).json({ error: "Orden no encontrada" });
@@ -680,4 +670,36 @@ export const asignarNota = async (req: Request, res: Response) => {
     },
   });
   return res.json({ order, document });
+};
+
+export const verNotasConvertibles = async (req: Request, res: Response) => {
+  try {
+    // @ts-ignore
+    const prisma = req.prisma as PrismaClient;
+
+    const { jwtUser } = req.body;
+    const user = await axios.get(
+      "https://pro.stockencapital.com/api/v1/users/me/",
+      {
+        headers: {
+          Authorization: `${jwtUser}`,
+        },
+      }
+    );
+    if (!user || user.data.status != "validated")
+      return res.status(400).json({ error: "Usuario no valido" });
+    let ventas = await prisma.venta_de_notas_convertibles.findMany();
+
+    let notas_convertibles: any[] = [];
+
+    for (let venta of ventas) {
+      notas_convertibles.push({
+        venta,
+      });
+    }
+
+    return res.json(notas_convertibles);
+  } catch (e) {
+    res.status(500).json(e);
+  }
 };

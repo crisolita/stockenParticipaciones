@@ -1,8 +1,6 @@
 import express from "express";
-import { authenticateToken } from "../middleware/auth";
-import { isAdmin } from "../middleware/isAdmin";
+
 import Joivalidator from "express-joi-validation";
-import { crearVentaNotaConvertible } from "../service/notasConvertibles";
 import {
   aceptarCompraNotaConvertible,
   asignarNota,
@@ -10,15 +8,46 @@ import {
   crearNotaConvertible,
   rechazarCompraNotaConvertible,
   signCompraDoc,
+  verNotasConvertibles,
 } from "../controllers/notasConvertibles";
+import {
+  querySchemaAceptarNC,
+  querySchemaAsignarNC,
+  querySchemaComprarNC,
+  querySchemaCrearVentaNC,
+  querySchemaRechazarNC,
+  querySchemaSignDocNC,
+  querySchemaVerNC,
+} from "../middleware/validation";
 const validator = Joivalidator.createValidator();
 
 const router = express.Router();
-router.post("/crearVentaDeNotaConvertible", crearNotaConvertible);
-router.post("/comprarNota", comprarNotaConvertible);
-router.post("/rechazarOrdenNC", rechazarCompraNotaConvertible);
-router.post("/aceptarOrdenNC", aceptarCompraNotaConvertible);
-router.post("/signDocNC", signCompraDoc);
-router.post("/asignarNota", asignarNota);
+router.post(
+  "/crearVentaDeNotaConvertible",
+  validator.body(querySchemaCrearVentaNC),
+  crearNotaConvertible
+);
+router.post(
+  "/comprarNota",
+  validator.body(querySchemaComprarNC),
+  comprarNotaConvertible
+);
+router.post(
+  "/rechazarOrdenNC",
+  validator.body(querySchemaRechazarNC),
+  rechazarCompraNotaConvertible
+);
+router.post(
+  "/aceptarOrdenNC",
+  validator.body(querySchemaAceptarNC),
+  aceptarCompraNotaConvertible
+);
+router.post("/signDocNC", validator.body(querySchemaSignDocNC), signCompraDoc);
+router.post("/asignarNota", validator.body(querySchemaAsignarNC), asignarNota);
+router.post(
+  "/verNotasConvertibles",
+  validator.body(querySchemaVerNC),
+  verNotasConvertibles
+);
 
 export default router;

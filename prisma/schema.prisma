@@ -1468,7 +1468,7 @@ capitulacion String?
 CAP_no_ronda String?
 floor String?
 fecha_devolucion DateTime?
-negociar Boolean
+negociar Boolean?
 user users_user @relation(fields: [creador_id], references: [id])
 }
 model nota_convertible {
@@ -1487,7 +1487,7 @@ capitulacion String?
 CAP_no_ronda String?
 floor String?
 fecha_devolucion DateTime?
-negociar Boolean
+negociar Boolean?
 owner_id Int
 user users_user @relation(fields: [owner_id], references: [id])
 }
