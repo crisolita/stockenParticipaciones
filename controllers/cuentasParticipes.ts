@@ -875,7 +875,7 @@ export const asignarCtaParticipe = async (req: Request, res: Response) => {
 
   let order = await prisma.orders.create({
     data: {
-      precio_total: 0,
+      precio_total: cantidad * cuenta.precio_unitario,
       cantidad: cantidad,
       cuenta_participe_id: cuenta.id,
       buyerID: user_id,

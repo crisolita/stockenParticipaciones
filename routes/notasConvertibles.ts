@@ -5,6 +5,7 @@ import Joivalidator from "express-joi-validation";
 import { crearVentaNotaConvertible } from "../service/notasConvertibles";
 import {
   aceptarCompraNotaConvertible,
+  asignarNota,
   comprarNotaConvertible,
   crearNotaConvertible,
   rechazarCompraNotaConvertible,
@@ -18,5 +19,6 @@ router.post("/comprarNota", comprarNotaConvertible);
 router.post("/rechazarOrdenNC", rechazarCompraNotaConvertible);
 router.post("/aceptarOrdenNC", aceptarCompraNotaConvertible);
 router.post("/signDocNC", signCompraDoc);
+router.post("/asignarNota", asignarNota);
 
 export default router;

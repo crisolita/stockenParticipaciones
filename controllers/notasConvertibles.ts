@@ -596,80 +596,86 @@ export const signCompraDoc = async (req: Request, res: Response) => {
     res.status(500).json(e);
   }
 };
-// export const asginarNotaConvertible = async (req: Request, res: Response) => {
-//   // @ts-ignore
-//   const prisma = req.prisma as PrismaClient;
-//   const {
-//     jwtCreador,
-//     cuenta_participe_id,
-//     cantidad,
-//     companyIdSeller,
-//     user_id,
-//     companyIdBuyer,
-//   } = req.body;
-//   let user;
-//   try {
-//     user = await axios.get("https://pro.stockencapital.com/api/v1/users/me/", {
-//       headers: {
-//         Authorization: `${jwtCreador}`,
-//       },
-//     });
-//     if (!user || user.data.status != "validated")
-//       return res.status(400).json({ error: "Usuario no valido" });
-//   } catch (e) {
-//     console.log(e);
-//     return res.status(500).json({ error: "Error al validar usuario" });
-//   }
-//   const cuenta = await prisma.cuentas_participes.findUnique({
-//     where: { id: cuenta_participe_id },
-//   });
-//   if (!cuenta)
-//     return res
-//       .status(404)
-//       .json({ error: "No se ha encontrado cuenta participe" });
-//   const companyBuyer = await prisma.companies_company.findUnique({
-//     where: { id: companyIdBuyer },
-//   });
-//   const companySeller = await prisma.companies_company.findUnique({
-//     where: { id: companyIdSeller },
-//   });
-//   if (!companyBuyer || companyBuyer.legal_representative_id != user.data.id)
-//     return res
-//       .status(400)
-//       .json({ error: "Empresa vendedor no valida o no pertenece al usuario" });
-//   if (!companySeller || companySeller.legal_representative_id != user_id)
-//     return res
-//       .status(400)
-//       .json({ error: "Empresa receptor no valida o no pertenece al usuario" });
-//   let order = await prisma.orders.create({
-//     data: {
-//       precio_total: 0,
-//       cantidad: cantidad,
-//       cuenta_participe_id: cuenta.id,
-//       buyerID: user_id,
-//       sellerID: user.data,
-//       companyIdSeller: companyIdSeller,
-//       status: "PENDIENTE_FIRMA",
-//       companyIdBuyer: companyIdBuyer,
-//       create_date: new Date(),
-//     },
-//   });
-//   const buyer = await prisma.users_user.findUnique({ where: { id: user_id } });
-//   if (!buyer) return res.status(400).json({ error: "Usuario no encontrado" });
-//   const document = await createSignature(
-//     order,
-//     cuenta,
-//     buyer,
-//     user.data,
-//     companySeller,
-//     prisma
-//   );
-//   order = await prisma.orders.update({
-//     where: { id: order.id },
-//     data: {
-//       documentId_first: document.documents[0].id,
-//       documentId_second: document.documents[1].id,
-//       signatureId: document.id,
-//     },
-//   });
-// };
+
+export const asignarNota = async (req: Request, res: Response) => {
+  // @ts-ignore
+  const prisma = req.prisma as PrismaClient;
+  const { jwtCreador, venta_nc_id, cantidad, user_id, companyIdBuyer } =
+    req.body;
+  let user;
+  try {
+    user = await axios.get("https://pro.stockencapital.com/api/v1/users/me/", {
+      headers: {
+        Authorization: `${jwtCreador}`,
+      },
+    });
+    if (!user || user.data.status != "validated")
+      return res.status(400).json({ error: "Usuario no valido" });
+  } catch (e) {
+    console.log(e);
+    return res.status(500).json({ error: "Error al validar usuario" });
+  }
+  const venta = await prisma.venta_de_notas_convertibles.findUnique({
+    where: { id: venta_nc_id },
+  });
+  if (!venta)
+    return res
+      .status(404)
+      .json({ error: "No se ha encontrado cuenta participe" });
+  if (companyIdBuyer) {
+    const companyBuyer = await prisma.companies_company.findUnique({
+      where: { id: companyIdBuyer },
+    });
+    if (!companyBuyer || companyBuyer.legal_representative_id != user_id)
+      return res.status(400).json({
+        error: "Empresa vendedor no valida o no pertenece al usuario",
+      });
+  }
+  const companySeller = await prisma.companies_company.findUnique({
+    where: { id: venta.companyID },
+  });
+  if (!companySeller || companySeller.legal_representative_id != user.data.id)
+    return res
+      .status(400)
+      .json({ error: "Empresa vendedor no valida o no pertenece al usuario" });
+  const buyer = await prisma.users_user.findUnique({ where: { id: user_id } });
+  if (!buyer) return res.status(400).json({ error: "Usuario no encontrado" });
+  const fiscalresidenceBuyer = await prisma.users_fiscalresidence.findFirst({
+    where: { user_id: buyer.id },
+  });
+  if (!fiscalresidenceBuyer)
+    return res
+      .status(400)
+      .json({ error: "Usuario debe tener residencia fiscal" });
+  let order = await prisma.orderNotaConvertible.create({
+    data: {
+      precio_total: cantidad * venta.ticket_minimo,
+      cantidad: cantidad,
+      venta_nc_id: venta.id,
+      buyerId: user_id,
+      sellerId: user.data.id,
+      status: "PENDIENTE_FIRMA",
+      companyIdBuyer: companyIdBuyer,
+      create_date: new Date(),
+    },
+  });
+
+  const document = await createDocNotaConvertible(
+    user.data.id,
+    buyer,
+    fiscalresidenceBuyer,
+    order,
+    companySeller,
+    venta,
+    prisma
+  );
+  order = await prisma.orderNotaConvertible.update({
+    where: { id: order.id },
+    data: {
+      document_id_first: document.documents[0].id,
+      document_id_second: document.documents[1].id,
+      signature_id: document.id,
+    },
+  });
+  return res.json({ order, document });
+};
