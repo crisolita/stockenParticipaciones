@@ -175,7 +175,13 @@ export const createSignature = async (
       top: "0.5in",
       bottom: "0.5in",
     };
-    const browser = await puppeteer.launch();
+    const browser = await puppeteer.launch({
+      executablePath: `${
+        process.env.ENV !== "TEST"
+          ? `/usr/share/man/man1/google-chrome.1.gz`
+          : ""
+      }`,
+    });
     const page = await browser.newPage();
 
     // Render the HTML content on the page
@@ -272,7 +278,13 @@ export const createDocReVenta = async (
       top: "0.5in",
       bottom: "0.5in",
     };
-    const browser = await puppeteer.launch();
+    const browser = await puppeteer.launch({
+      executablePath: `${
+        process.env.ENV !== "TEST"
+          ? `/usr/share/man/man1/google-chrome.1.gz`
+          : ""
+      }`,
+    });
     const page = await browser.newPage();
 
     // Render the HTML content on the page
@@ -420,7 +432,13 @@ export const createDocNotaConvertible = async (
       top: "0.5in",
       bottom: "0.5in",
     };
-    const browser = await puppeteer.launch();
+    const browser = await puppeteer.launch({
+      executablePath: `${
+        process.env.ENV !== "TEST"
+          ? `/usr/share/man/man1/google-chrome.1.gz`
+          : ""
+      }`,
+    });
     const page = await browser.newPage();
 
     // Render the HTML content on the page
