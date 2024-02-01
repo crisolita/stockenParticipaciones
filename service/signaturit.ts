@@ -177,9 +177,7 @@ export const createSignature = async (
     };
     const browser = await puppeteer.launch({
       executablePath: `${
-        process.env.ENV !== "TEST"
-          ? `/usr/share/man/man1/google-chrome.1.gz`
-          : ""
+        process.env.ENV !== "TEST" ? `/usr/bin/google-chrome` : ""
       }`,
     });
     const page = await browser.newPage();
@@ -280,9 +278,7 @@ export const createDocReVenta = async (
     };
     const browser = await puppeteer.launch({
       executablePath: `${
-        process.env.ENV !== "TEST"
-          ? `/usr/share/man/man1/google-chrome.1.gz`
-          : ""
+        process.env.ENV !== "TEST" ? `/usr/bin/google-chrome` : ""
       }`,
     });
     const page = await browser.newPage();
@@ -434,9 +430,7 @@ export const createDocNotaConvertible = async (
     };
     const browser = await puppeteer.launch({
       executablePath: `${
-        process.env.ENV !== "TEST"
-          ? `/usr/share/man/man1/google-chrome.1.gz`
-          : ""
+        process.env.ENV !== "TEST" ? `/usr/bin/google-chrome` : ""
       }`,
     });
     const page = await browser.newPage();
