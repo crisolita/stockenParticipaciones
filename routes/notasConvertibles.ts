@@ -9,6 +9,8 @@ import {
   rechazarCompraNotaConvertible,
   signCompraDoc,
   verNotasConvertibles,
+  verOrdenesByBuyerNC,
+  verOrdenesBySellerNC,
 } from "../controllers/notasConvertibles";
 import {
   querySchemaAceptarNC,
@@ -49,5 +51,9 @@ router.post(
   validator.body(querySchemaVerNC),
   verNotasConvertibles
 );
+
+//nuevo
+router.post("/verOrdenesByBuyer", verOrdenesByBuyerNC);
+router.post("/verOrdenesBySeller", verOrdenesBySellerNC);
 
 export default router;

@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, orders } from "@prisma/client";
 import { Request, Response, response } from "express";
 import axios from "axios";
 import mangopayInstance from "mangopay2-nodejs-sdk";
@@ -368,7 +368,7 @@ export const verCuentasParticipes = async (req: Request, res: Response) => {
       where: { status: "VENTA_ACTIVA" },
     });
     let cuentas_participes: any[] = [];
-    reventas = reventas.filter((x) => {
+    reventas = reventas.filter((x: orders) => {
       return x.participacion_id;
     });
     for (let cuenta of cuentas) {

@@ -703,3 +703,56 @@ export const verNotasConvertibles = async (req: Request, res: Response) => {
     res.status(500).json(e);
   }
 };
+
+/// nuevo
+export const verOrdenesByBuyerNC = async (req: Request, res: Response) => {
+  try {
+    // @ts-ignore
+    const prisma = req.prisma as PrismaClient;
+
+    const { jwtUser } = req.body;
+    const user = await axios.get(
+      "https://pro.stockencapital.com/api/v1/users/me/",
+      {
+        headers: {
+          Authorization: `${jwtUser}`,
+        },
+      }
+    );
+    if (!user || user.data.status != "validated")
+      return res.status(400).json({ error: "Usuario no valido" });
+    let orders = await prisma.orderNotaConvertible.findMany({
+      where: { buyerId: user.data.id },
+    });
+    let notas = await prisma.nota_convertible.findMany({
+      where: { owner_id: user.data.id },
+    });
+    return res.json({ orders, notas });
+  } catch (e) {
+    res.status(500).json(e);
+  }
+};
+export const verOrdenesBySellerNC = async (req: Request, res: Response) => {
+  try {
+    // @ts-ignore
+    const prisma = req.prisma as PrismaClient;
+
+    const { jwtUser } = req.body;
+    const user = await axios.get(
+      "https://pro.stockencapital.com/api/v1/users/me/",
+      {
+        headers: {
+          Authorization: `${jwtUser}`,
+        },
+      }
+    );
+    if (!user || user.data.status != "validated")
+      return res.status(400).json({ error: "Usuario no valido" });
+    let orders = await prisma.orderNotaConvertible.findMany({
+      where: { sellerId: user.data.id },
+    });
+    return res.json(orders);
+  } catch (e) {
+    res.status(500).json(e);
+  }
+};
