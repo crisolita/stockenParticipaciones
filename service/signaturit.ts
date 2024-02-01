@@ -179,6 +179,7 @@ export const createSignature = async (
       executablePath: `${
         process.env.ENV !== "TEST" ? `/usr/bin/google-chrome` : ""
       }`,
+      args: ["--no-sandbox"],
     });
     const page = await browser.newPage();
 
@@ -280,6 +281,7 @@ export const createDocReVenta = async (
       executablePath: `${
         process.env.ENV !== "TEST" ? `/usr/bin/google-chrome` : ""
       }`,
+      args: ["--no-sandbox"],
     });
     const page = await browser.newPage();
 
@@ -432,6 +434,7 @@ export const createDocNotaConvertible = async (
       executablePath: `${
         process.env.ENV !== "TEST" ? `/usr/bin/google-chrome` : ""
       }`,
+      args: ["--no-sandbox"],
     });
     const page = await browser.newPage();
 
