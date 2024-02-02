@@ -13,7 +13,7 @@ import {
 } from "@prisma/client";
 import fs from "fs";
 import mustache from "mustache";
-import puppeteer from "puppeteer";
+import pdf from "html-pdf";
 // replace it with your API key
 const API_KEY = process.env.SIGNATURITKEY;
 const client = new SignaturitClient(API_KEY);
@@ -170,32 +170,16 @@ export const createSignature = async (
     // Ajusta las opciones según tus necesidades
     fs.writeFileSync("createdCP.html", mustache.render(plantilla, data));
     const created = fs.readFileSync("createdCP.html", "utf-8");
-
-    const margin = {
-      top: "0.5in",
-      bottom: "0.5in",
-    };
-    const browser = await puppeteer.launch({
-      executablePath: `${
-        process.env.ENV !== "TEST" ? `/usr/bin/google-chrome` : ""
-      }`,
-      args: ["--no-sandbox"],
-    });
-    const page = await browser.newPage();
-
-    // Render the HTML content on the page
-    await page.setContent(created);
-
-    // Generate PDF
-    const newPdf = await page.pdf({
-      path: "crearCP.pdf",
-      format: "A4", // or your desired format
-      margin: margin, // Pass your border options here
+    const pdfPromise = new Promise((resolve, reject) => {
+      pdf.create(created, options).toFile("crearCP.pdf", (err, res) => {
+        if (err) reject(err);
+        else resolve(res);
+      });
     });
 
-    await browser.close();
-    console.log(newPdf);
+    const resultado = await pdfPromise;
 
+    console.log(resultado, "Soy undefinde?");
     const document = await client.createSignature("crearCP.pdf", [
       {
         name: creador.first_name,
@@ -220,7 +204,7 @@ export const createSignature = async (
 
 export const isCompleted = async (signatureId: string) => {
   const signature = await client.getSignature(signatureId);
-  let data = [];
+  let data = [{}];
   for (let docs of signature.documents) {
     if (docs.status == "completed") {
       data.push({
@@ -272,31 +256,21 @@ export const createDocReVenta = async (
     // Ajusta las opciones según tus necesidades
     fs.writeFileSync("reventaDocMaq.html", mustache.render(plantilla, data));
     const created = fs.readFileSync("reventaDocMaq.html", "utf-8");
-
-    const margin = {
-      top: "0.5in",
-      bottom: "0.5in",
+    const options = {
+      border: {
+        top: "0.5in",
+        bottom: "0.5in",
+      },
     };
-    const browser = await puppeteer.launch({
-      executablePath: `${
-        process.env.ENV !== "TEST" ? `/usr/bin/google-chrome` : ""
-      }`,
-      args: ["--no-sandbox"],
-    });
-    const page = await browser.newPage();
-
-    // Render the HTML content on the page
-    await page.setContent(created);
-
-    // Generate PDF
-    const newPdf = await page.pdf({
-      path: "reventa.pdf",
-      format: "A4", // or your desired format
-      margin: margin, // Pass your border options here
+    const pdfPromise = new Promise((resolve, reject) => {
+      pdf.create(created, options).toFile("reventa.pdf", (err, res) => {
+        if (err) reject(err);
+        else resolve(res);
+      });
     });
 
-    await browser.close();
-    console.log(newPdf);
+    const resultado = await pdfPromise;
+    console.log(resultado);
     const document = await client.createSignature("reventa.pdf", [
       {
         name: seller.first_name,
@@ -426,31 +400,21 @@ export const createDocNotaConvertible = async (
       mustache.render(plantilla, data)
     );
     const created = fs.readFileSync("venta_nota_maqueta.html", "utf-8");
-    const margin = {
-      top: "0.5in",
-      bottom: "0.5in",
+    const options = {
+      border: {
+        top: "0.5in",
+        bottom: "0.5in",
+      },
     };
-    const browser = await puppeteer.launch({
-      executablePath: `${
-        process.env.ENV !== "TEST" ? `/usr/bin/google-chrome` : ""
-      }`,
-      args: ["--no-sandbox"],
-    });
-    const page = await browser.newPage();
-
-    // Render the HTML content on the page
-    await page.setContent(created);
-
-    // Generate PDF
-    const newPdf = await page.pdf({
-      path: "venta_nota.pdf",
-      format: "A4", // or your desired format
-      margin: margin, // Pass your border options here
+    const pdfPromise = new Promise((resolve, reject) => {
+      pdf.create(created, options).toFile("venta_nota.pdf", (err, res) => {
+        if (err) reject(err);
+        else resolve(res);
+      });
     });
 
-    await browser.close();
-    console.log(newPdf);
-
+    const resultado = await pdfPromise;
+    console.log(resultado);
     const document = await client.createSignature("venta_nota.pdf", [
       {
         name: seller.first_name,

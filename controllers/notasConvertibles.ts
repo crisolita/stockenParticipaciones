@@ -590,8 +590,7 @@ export const signCompraDoc = async (req: Request, res: Response) => {
 export const asignarNota = async (req: Request, res: Response) => {
   // @ts-ignore
   const prisma = req.prisma as PrismaClient;
-  const { jwtCreador, venta_nc_id, cantidad, user_id, companyIdBuyer } =
-    req.body;
+  const { jwtCreador, venta_nc_id, cantidad, user_id, user_cod } = req.body;
   let user;
   try {
     user = await axios.get("https://pro.stockencapital.com/api/v1/users/me/", {
@@ -612,9 +611,10 @@ export const asignarNota = async (req: Request, res: Response) => {
     return res
       .status(404)
       .json({ error: "No se ha encontrado cuenta participe" });
-  if (companyIdBuyer) {
-    const companyBuyer = await prisma.companies_company.findUnique({
-      where: { id: companyIdBuyer },
+  let companyBuyer;
+  if (user_cod.substring(0, 2) == "pj") {
+    companyBuyer = await prisma.companies_company.findFirst({
+      where: { id: user_cod },
     });
     if (!companyBuyer || companyBuyer.legal_representative_id != user_id)
       return res.status(400).json({
@@ -645,7 +645,7 @@ export const asignarNota = async (req: Request, res: Response) => {
       buyerId: user_id,
       sellerId: user.data.id,
       status: "PENDIENTE_FIRMA",
-      companyIdBuyer: companyIdBuyer,
+      companyIdBuyer: companyBuyer ? companyBuyer.id : null,
       create_date: new Date(),
     },
   });
@@ -704,6 +704,52 @@ export const verNotasConvertibles = async (req: Request, res: Response) => {
   }
 };
 
+/// nuevo borrar
+export const borrarNotaConvertible = async (req: Request, res: Response) => {
+  try {
+    // @ts-ignore
+    const prisma = req.prisma as PrismaClient;
+    const { jwtCreador, venta_nc_id } = req.body;
+    let user;
+    try {
+      user = await axios.get(
+        "https://pro.stockencapital.com/api/v1/users/me/",
+        {
+          headers: {
+            Authorization: `${jwtCreador}`,
+          },
+        }
+      );
+      console.log(user.data);
+      if (!user || user.data.status != "validated")
+        return res.status(400).json({ error: "Usuario no valido" });
+    } catch (e) {
+      console.log(e);
+      return res.status(500).json({ error: "Error al validar usuario" });
+    }
+    /// validar que la empresa tenga mangopay ID
+    const orderpaid = await prisma.orderNotaConvertible.findFirst({
+      where: { status: "PENDIENTE_FIRMA" },
+    });
+    if (!orderpaid)
+      return res
+        .status(400)
+        .json({ error: "Hay una orden pagada en esta nota convertible" });
+    await prisma.orderNotaConvertible.deleteMany({
+      where: { venta_nc_id },
+    });
+    const venta = await prisma.venta_de_notas_convertibles.delete({
+      where: {
+        id: venta_nc_id,
+      },
+    });
+
+    res.json(venta);
+  } catch (e) {
+    console.log(e);
+    res.status(500).json(e);
+  }
+};
 /// nuevo
 export const verOrdenesByBuyerNC = async (req: Request, res: Response) => {
   try {

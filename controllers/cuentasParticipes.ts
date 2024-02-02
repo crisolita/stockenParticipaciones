@@ -1,4 +1,4 @@
-import { PrismaClient, orders } from "@prisma/client";
+import { PrismaClient, participacion } from "@prisma/client";
 import { Request, Response, response } from "express";
 import axios from "axios";
 import mangopayInstance from "mangopay2-nodejs-sdk";
@@ -282,22 +282,28 @@ export const verOrdenesBySell = async (req: Request, res: Response) => {
     const prisma = req.prisma as PrismaClient;
 
     const { jwtUser, companyId } = req.body;
-    const user = await axios.get(
-      "https://pro.stockencapital.com/api/v1/users/me/",
-      {
-        headers: {
-          Authorization: `${jwtUser}`,
-        },
-      }
-    );
-    if (!user || user.data.status != "validated")
-      return res.status(400).json({ error: "Usuario no valido" });
+    let user;
+    try {
+      user = await axios.get(
+        "https://pro.stockencapital.com/api/v1/users/me/",
+        {
+          headers: {
+            Authorization: `${jwtUser}`,
+          },
+        }
+      );
+      if (!user || user.data.status != "validated")
+        return res.status(400).json({ error: "Usuario no valido" });
+    } catch (e) {
+      console.log(e);
+      return res.status(500).json({ error: "Error al validar usuario" });
+    }
 
     //create bloqueo mangopay user
-    let saldoBloqueado = [];
-    let finalizadas = [];
-    let porFirmarVendedor = [];
-    let ventasActivas = [];
+    let saldoBloqueado = [{}];
+    let finalizadas = [{}];
+    let porFirmarVendedor = [{}];
+    let ventasActivas = [{}];
 
     saldoBloqueado.push(
       await prisma.orders.findMany({
@@ -368,7 +374,7 @@ export const verCuentasParticipes = async (req: Request, res: Response) => {
       where: { status: "VENTA_ACTIVA" },
     });
     let cuentas_participes: any[] = [];
-    reventas = reventas.filter((x: orders) => {
+    reventas = reventas.filter((x) => {
       return x.participacion_id;
     });
     for (let cuenta of cuentas) {
@@ -689,8 +695,8 @@ export const signCompraDoc = async (req: Request, res: Response) => {
     if (!buyer) return res.status(400).json({ error: "Comprador no valido" });
 
     const docCompleted = await isCompleted(order.signatureId);
-    let participacion;
-    if (docCompleted.length < 2)
+    let participacion: participacion | null;
+    if (docCompleted?.length < 2)
       return res.status(400).json({ error: "Aun no han firmado ambas partes" });
     if (order.participacion_id) {
       //participacion anterior
@@ -816,17 +822,17 @@ export const rechazarComprasCuentaParticipe = async (
 export const asignarCtaParticipe = async (req: Request, res: Response) => {
   // @ts-ignore
   const prisma = req.prisma as PrismaClient;
-  const { jwtCreador, cuenta_participe_id, cantidad, user_id, companyIdBuyer } =
+  const { jwtUser, cuenta_participe_id, cantidad, user_id, user_cod } =
     req.body;
   let user;
   try {
     user = await axios.get("https://pro.stockencapital.com/api/v1/users/me/", {
       headers: {
-        Authorization: `${jwtCreador}`,
+        Authorization: `${jwtUser}`,
       },
     });
-    if (!user || user.data.status != "validated")
-      return res.status(400).json({ error: "Usuario no valido" });
+    if (!user || user.data.status != "validated" || !user.data.is_superuser)
+      return res.status(400).json({ error: "Usuario no valido o no es admin" });
   } catch (e) {
     console.log(e);
     return res.status(500).json({ error: "Error al validar usuario" });
@@ -838,15 +844,17 @@ export const asignarCtaParticipe = async (req: Request, res: Response) => {
     return res
       .status(404)
       .json({ error: "No se ha encontrado cuenta participe" });
-  if (companyIdBuyer) {
-    const companyBuyer = await prisma.companies_company.findUnique({
-      where: { id: companyIdBuyer },
+  let companyBuyer;
+  if (user_cod.substring(0, 2) == "pj") {
+    companyBuyer = await prisma.companies_company.findFirst({
+      where: { cod: user_cod },
     });
-    if (!companyBuyer || companyBuyer.legal_representative_id != user_id)
+    if (!companyBuyer)
       return res.status(400).json({
-        error: "Empresa vendedor no valida o no pertenece al usuario",
+        error: "Empresa vendedor no valida",
       });
   }
+
   const companySeller = await prisma.companies_company.findUnique({
     where: { id: cuenta.companyIDSeller },
   });
@@ -864,7 +872,7 @@ export const asignarCtaParticipe = async (req: Request, res: Response) => {
       sellerID: user.data.id,
       companyIdSeller: cuenta.companyIDSeller,
       status: "PENDIENTE_FIRMA",
-      companyIdBuyer: companyIdBuyer,
+      companyIdBuyer: companyBuyer ? companyBuyer.id : null,
       create_date: new Date(),
     },
   });
@@ -1258,6 +1266,53 @@ export const prueba_del_doc = async (req: Request, res: Response) => {
       console.log(e);
       return res.status(400).json(e);
     }
+  } catch (e) {
+    console.log(e);
+    res.status(500).json(e);
+  }
+};
+
+//// nuevo borrar cta participe
+export const borrarCtaParticipe = async (req: Request, res: Response) => {
+  try {
+    // @ts-ignore
+    const prisma = req.prisma as PrismaClient;
+    const { jwtCreador, cuenta_participe_id } = req.body;
+    let user;
+    try {
+      user = await axios.get(
+        "https://pro.stockencapital.com/api/v1/users/me/",
+        {
+          headers: {
+            Authorization: `${jwtCreador}`,
+          },
+        }
+      );
+      console.log(user.data);
+      if (!user || user.data.status != "validated")
+        return res.status(400).json({ error: "Usuario no valido" });
+    } catch (e) {
+      console.log(e);
+      return res.status(500).json({ error: "Error al validar usuario" });
+    }
+    /// validar que la empresa tenga mangopay ID
+    const orderpaid = await prisma.orders.findFirst({
+      where: { status: "PENDIENTE_FIRMA" },
+    });
+    if (!orderpaid)
+      return res
+        .status(400)
+        .json({ error: "Hay una orden pagada en esta cuenta participe" });
+    await prisma.orders.deleteMany({
+      where: { cuenta_participe_id: cuenta_participe_id },
+    });
+    const cuenta = await prisma.cuentas_participes.delete({
+      where: {
+        id: cuenta_participe_id,
+      },
+    });
+
+    res.json(cuenta);
   } catch (e) {
     console.log(e);
     res.status(500).json(e);

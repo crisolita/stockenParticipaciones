@@ -10,7 +10,7 @@ import bodyParser from "body-parser";
 
 const prisma = new PrismaClient();
 const app: Express = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3001;
 
 app.use(cors());
 // app.use(morgan("tiny"));
@@ -40,8 +40,39 @@ app.use((err: any, req: any, res: any, next: any) => {
 });
 
 app.get("/", (req: Request, res: Response) => res.type("html").send(html));
+app.get("/health", (req: Request, res: Response, NextFunction) => {
+  const healthcheck = {
+    uptime: process.uptime(),
+    message: "OK",
+    timestamp: Date.now(),
+  };
+  try {
+    res.send(healthcheck);
+  } catch (error) {
+    //@ts-ignore
+    healthcheck.message = error;
+    res.status(503).send();
+  }
+});
 
-app.listen(port, () => console.log(`Example app listening on port ${port}!`));
+// Start the server
+const server = app.listen(port, () => {
+  console.log(`Stocken accounts listening on port ${port}!`);
+});
+
+// Graceful shutdown
+const handleExit = async (signal: string) => {
+  console.log(`Received ${signal}. Closing server now.`);
+  await prisma.$disconnect(); // Disconnect Prisma
+  server.close(() => {
+    console.log("HTTP server closed.");
+    process.exit(0);
+  });
+};
+
+process.on("SIGINT", handleExit);
+process.on("SIGTERM", handleExit);
+
 const html = `
 <!DOCTYPE html>
 <html>

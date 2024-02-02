@@ -1269,9 +1269,10 @@ model users_user {
   users_user_groups                                                            users_user_groups[]
   users_user_user_permissions                                                  users_user_user_permissions[]
   cuentas_participes                                                           cuentas_participes[]
-  participacion                                                                 participacion[]
-  nota_convertible nota_convertible[]
-  venta_convertibel venta_de_notas_convertibles[]
+  participacion                                                                participacion[]
+  nota_convertible                                                             nota_convertible[]
+  venta_convertibel                                                            venta_de_notas_convertibles[]
+
   @@index([cod], map: "users_user_cod_7b7c3ebf")
   @@index([cod], map: "users_user_cod_7b7c3ebf_like")
   @@index([email], map: "users_user_email_243f6e77_like")
@@ -1339,9 +1340,9 @@ model votes_vote {
 
 /// A partir de aqui esta hecho por @crisolita
 model cuentas_participes {
-  id                  Int            @id @default(autoincrement())
+  id                  Int                                          @id @default(autoincrement())
   creator_id          Int
-  nombre_del_proyecto String
+  nombre_del_proyecto String 
   descripcion         String
   cantidad_a_vender   Int
   precio_unitario     Float
@@ -1354,144 +1355,153 @@ model cuentas_participes {
   plazos_remuneracion String
   juridicion          String
   fecha_lanzamiento   DateTime
-  companyIDSeller Int
-  liquidacion String
-  clausulas   String?
-  mangopay_transfers mangopay_mangopaytransfer_cuenta_participe[]
-  users_user          users_user     @relation(fields: [creator_id], references: [id])
+  companyIDSeller     Int
+  liquidacion         String
+  clausulas           String?
+  mangopay_transfers  mangopay_mangopaytransfer_cuenta_participe[]
+  users_user          users_user                                   @relation(fields: [creator_id], references: [id])
   paticipacion        participacion[]
 }
 
 model orders {
-  id           Int                     @id @default(autoincrement())
-  precio_total Float
-  cantidad     Int
-  documentId_first  String?
-  documentId_second  String?
-  signatureId String?
+  id                  Int                     @id @default(autoincrement())
+  precio_total        Float
+  cantidad            Int
+  documentId_first    String?
+  documentId_second   String?
+  signatureId         String?
   cuenta_participe_id Int
-  buyerID      Int?
-  sellerID     Int
-  bloqueo_id  Int?
-  companyIdSeller Int?
-  status       StatusOrderCtaParticipe
-  companyIdBuyer Int?
-  create_date  DateTime
-  complete_at  DateTime?
-  participacion_id Int?
+  buyerID             Int?
+  sellerID            Int
+  bloqueo_id          Int?
+  companyIdSeller     Int?
+  status              StatusOrderCtaParticipe
+  companyIdBuyer      Int?
+  create_date         DateTime
+  complete_at         DateTime?
+  participacion_id    Int?
 }
 
 model orderNotaConvertible {
- id           Int                     @id @default(autoincrement())
-nota_convertible_id Int?
-cantidad Int
-precio_total Float
-venta_nc_id Int?
-signature_id String?
-document_id_first String?
-document_id_second String?
-create_date  DateTime
-complete_at  DateTime?
-sellerId Int
-companyIdBuyer Int?
-buyerId Int?
-bloqueo_id Int?
-status StatusOrderCtaParticipe
+  id                  Int                     @id @default(autoincrement())
+  nota_convertible_id Int?
+  cantidad            Int
+  precio_total        Float
+  venta_nc_id         Int?
+  signature_id        String?
+  document_id_first   String?
+  document_id_second  String?
+  create_date         DateTime
+  complete_at         DateTime?
+  sellerId            Int
+  companyIdBuyer      Int?
+  buyerId             Int?
+  bloqueo_id          Int?
+  status              StatusOrderCtaParticipe
 }
 
 model participacion {
-  id                 Int                @id @default(autoincrement())
-  cuenta_participe_id       Int
-  cantidad           Int
-  monto_pagado       Int
-  document_id_first       String
+  id                  Int                      @id @default(autoincrement())
+  cuenta_participe_id Int
+  cantidad            Int
+  monto_pagado        Int
+  document_id_first   String
   document_id_second  String
-  owner_id           Int
-  signature_id String
-  buy_date DateTime
-  cesion_is_allowed Boolean?
-  records record_participaciones[]
-  users_user         users_user         @relation(fields: [owner_id], references: [id])
-  cuentas_participes cuentas_participes @relation(fields: [cuenta_participe_id], references: [id])
+  owner_id            Int
+  signature_id        String
+  buy_date            DateTime
+  cesion_is_allowed   Boolean?
+    status              StatusActivo?
+
+  records             record_participaciones[]
+  users_user          users_user               @relation(fields: [owner_id], references: [id])
+  cuentas_participes  cuentas_participes       @relation(fields: [cuenta_participe_id], references: [id])
 }
 
 model mangopay_basemangopaytransaction_cuenta_participe {
-  id                               Int                               @id @default(autoincrement())
-  created                          DateTime                          @db.Timestamptz(6)
-  modified                         DateTime                          @db.Timestamptz(6)
-  transaction_id                   String                            @db.VarChar(32)
-  status                           String                            @db.VarChar(32)
-  amount                           Decimal                           @db.Decimal(20, 2)
-  currency                         String                            @db.VarChar(3)
-  fees                             Decimal                           @db.Decimal(20, 2)
-  cod                              String                            @db.VarChar(30)
-  mangopay_mangopaytransfer_cuenta_participe  mangopay_mangopaytransfer_cuenta_participe?
+  id                                         Int                                         @id @default(autoincrement())
+  created                                    DateTime                                    @db.Timestamptz(6)
+  modified                                   DateTime                                    @db.Timestamptz(6)
+  transaction_id                             String                                      @db.VarChar(32)
+  status                                     String                                      @db.VarChar(32)
+  amount                                     Decimal                                     @db.Decimal(20, 2)
+  currency                                   String                                      @db.VarChar(3)
+  fees                                       Decimal                                     @db.Decimal(20, 2)
+  cod                                        String                                      @db.VarChar(30)
+  mangopay_mangopaytransfer_cuenta_participe mangopay_mangopaytransfer_cuenta_participe?
 }
+
 model mangopay_mangopaytransfer_cuenta_participe {
-  from_user_id                                                  Int
-  to_user_id                                                    Int
-  basemangopaytransaction_ptr_id                                Int                              @id
-  from_cod                                                      String?                          @db.VarChar(255)
-  to_cod                                                        String?                          @db.VarChar(255)
-  total_amount                                                  Decimal?                         @db.Decimal(20, 2)
-  cuenta_participe_id Int
-  cuenta_participe cuentas_participes @relation(fields:[cuenta_participe_id],references: [id])
-  mangopay_basemangopaytransaction_cuenta_participe             mangopay_basemangopaytransaction_cuenta_participe @relation(fields: [basemangopaytransaction_ptr_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "mangopay_mangopaytra_basemangopaytransact_d76323ba_fk_mangopay_")
+  from_user_id                                      Int
+  to_user_id                                        Int
+  basemangopaytransaction_ptr_id                    Int                                               @id
+  from_cod                                          String?                                           @db.VarChar(255)
+  to_cod                                            String?                                           @db.VarChar(255)
+  total_amount                                      Decimal?                                          @db.Decimal(20, 2)
+  cuenta_participe_id                               Int
+  cuenta_participe                                  cuentas_participes                                @relation(fields: [cuenta_participe_id], references: [id])
+  mangopay_basemangopaytransaction_cuenta_participe mangopay_basemangopaytransaction_cuenta_participe @relation(fields: [basemangopaytransaction_ptr_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "mangopay_mangopaytra_basemangopaytransact_d76323ba_fk_mangopay_")
 }
 
 model record_participaciones {
-  id                 Int                @id @default(autoincrement())
-  participacion_id       Int
-  cantidad           Int
-  monto_pagado       Int
-  old_document_id_first        String
-  old_document_second      String
-  old_signature_id String
-  old_owner_id           Int
-  change_date DateTime
-  participacion participacion @relation(fields:[participacion_id],references: [id])
+  id                    Int           @id @default(autoincrement())
+  participacion_id      Int
+  cantidad              Int
+  monto_pagado          Int
+  old_document_id_first String
+  old_document_second   String
+  old_signature_id      String
+  old_owner_id          Int
+  change_date           DateTime
+  participacion         participacion @relation(fields: [participacion_id], references: [id])
 }
 
 model venta_de_notas_convertibles {
-id                 Int                @id @default(autoincrement())
-cantidad_a_vender Int
-cantidad_restante Int
-ticket_minimo     Float
-creador_id Int
-companyID Int
-interes_fijo Float?
-interes_variable Float?
-vence_date DateTime?
-vence_cantidad Int?
-tasa_descuento Float?
-capitulacion String?
-CAP_no_ronda String?
-floor String?
-fecha_devolucion DateTime?
-negociar Boolean?
-user users_user @relation(fields: [creador_id], references: [id])
-}
-model nota_convertible {
-id                 Int                @id @default(autoincrement())
-valor Float
-venta_nc_id Int?
-document_id_first       String?
-document_id_second  String?
-  signature_id String?
-  buy_date DateTime
-interes_fijo Float?
-interes_variable Float?
-vence_date DateTime?
-tasa_descuento Float?
-capitulacion String?
-CAP_no_ronda String?
-floor String?
-fecha_devolucion DateTime?
-negociar Boolean?
-owner_id Int
-user users_user @relation(fields: [owner_id], references: [id])
+  id                Int        @id @default(autoincrement())
+  cantidad_a_vender Int
+  cantidad_restante Int
+  ticket_minimo     Float
+  creador_id        Int
+  companyID         Int
+  interes_fijo      Float?
+  interes_variable  Float?
+  vence_date        DateTime?
+  vence_cantidad    Int?
+  tasa_descuento    Float?
+  capitulacion      String?
+  CAP_no_ronda      String?
+  floor             String?
+  fecha_devolucion  DateTime?
+  negociar          Boolean?
+  user              users_user @relation(fields: [creador_id], references: [id])
 }
 
+model nota_convertible {
+  id                 Int        @id @default(autoincrement())
+  valor              Float
+  venta_nc_id        Int?
+  document_id_first  String?
+  document_id_second String?
+  signature_id       String?
+  buy_date           DateTime
+  interes_fijo       Float?
+  interes_variable   Float?
+  vence_date         DateTime?
+  tasa_descuento     Float?
+  capitulacion       String?
+  CAP_no_ronda       String?
+  floor              String?
+  fecha_devolucion   DateTime?
+  negociar           Boolean?
+  owner_id           Int
+  status              StatusActivo?
+  user               users_user @relation(fields: [owner_id], references: [id])
+}
+
+model nombre {
+  id    Int   @id @default(autoincrement())
+  valor Float
+}
 
 enum StatusOrderCtaParticipe {
   VENTA_ACTIVA
@@ -1499,4 +1509,10 @@ enum StatusOrderCtaParticipe {
   PENDIENTE_FIRMA
   COMPRA_TERMINADA
   RECHAZADA
+}
+
+enum StatusActivo {
+  ACTIVO
+  FINALIZADO
+  CANCELADO
 }
