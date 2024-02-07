@@ -158,7 +158,7 @@ export const createSignature = async (
           ),
       Empresa_descripcion: company.description,
       Proyecto_descripcion: cuenta.descripcion,
-      Client_aporte: order.precio_total,
+      Client_aporte: order.aportacion,
       Clausulas: cuenta.clausulas,
     };
     const options = {

@@ -22,22 +22,17 @@ export const crearCuentaParticipe = async (req: Request, res: Response) => {
   try {
     // @ts-ignore
     const prisma = req.prisma as PrismaClient;
-    const {
+    let {
       jwtCreador,
       companyID,
       nombre_del_proyecto,
       descripcion,
       cantidad_a_vender,
-      precio_unitario,
       cesion,
+      ticket_minimo,
       duracion,
-      remuneracion,
-      plazos_remuneracion,
-      resultado,
       determinacion,
-      juridicion,
       fecha_lanzamiento,
-      liquidacion,
       Clausulas,
     } = req.body;
     let user;
@@ -115,16 +110,11 @@ export const crearCuentaParticipe = async (req: Request, res: Response) => {
         nombre_del_proyecto,
         descripcion,
         cantidad_a_vender,
-        precio_unitario,
         cantidad_restante: cantidad_a_vender,
         cesion,
         duracion: new Date(duracion),
-        remuneracion,
-        plazos_remuneracion,
-        resultado,
         determinacion,
-        juridicion,
-        liquidacion,
+        ticket_minimo,
         clausulas: Clausulas,
         companyIDSeller: company.id,
         fecha_lanzamiento: new Date(fecha_lanzamiento),
@@ -142,14 +132,15 @@ export const comprarParticipacion = async (req: Request, res: Response) => {
     // @ts-ignore
     const prisma = req.prisma as PrismaClient;
 
-    const { participe_id, cantidad, jwtUser, companyIdBuyer } = req.body;
+    let { participe_id, aportacion, jwtUser, companyIdBuyer } = req.body;
     let cuenta_participe = await prisma.cuentas_participes.findUnique({
       where: { id: participe_id },
     });
     if (!cuenta_participe)
       return res.status(400).json({ error: "No existe cuenta participe" });
-
-    if (cantidad > cuenta_participe.cantidad_restante)
+    if (cuenta_participe.cantidad_restante <= cuenta_participe.ticket_minimo) {
+      aportacion = cuenta_participe.cantidad_restante;
+    } else if (aportacion > cuenta_participe.cantidad_restante)
       return res
         .status(400)
         .json({ error: "No hay suficientes participaciones" });
@@ -221,8 +212,8 @@ export const comprarParticipacion = async (req: Request, res: Response) => {
       if (
         !user.data.first_name ||
         !user.data.last_name ||
-        // !user.data.marital_status ||
-        // !user.data.profession ||
+        !user.data.marital_status ||
+        !user.data.profession ||
         !user.data.id_document_number ||
         !fiscalresidence
       )
@@ -233,13 +224,13 @@ export const comprarParticipacion = async (req: Request, res: Response) => {
     const company = await prisma.companies_company.findUnique({
       where: { id: cuenta_participe.companyIDSeller },
     });
-    if (funds.data.funds < cantidad * cuenta_participe.precio_unitario)
+    if (funds.data.funds < aportacion)
       return res.status(400).json({ error: "Fondo insuficiente" });
     // /bloquear saldo
     const bloqueoSaldo = await axios.post(
       "https://pro.stockencapital.com/api/v1/moneyblocks/create_money_block/",
       {
-        blocked_amount: cantidad * cuenta_participe.precio_unitario,
+        blocked_amount: aportacion,
         user_cod: user.data.cod,
         company_cod: company?.cod,
         status: "PROCESSING",
@@ -252,8 +243,7 @@ export const comprarParticipacion = async (req: Request, res: Response) => {
     );
     const order = await prisma.orders.create({
       data: {
-        precio_total: cantidad * cuenta_participe.precio_unitario,
-        cantidad: cantidad,
+        aportacion: aportacion,
         cuenta_participe_id: cuenta_participe.id,
         sellerID: cuenta_participe.creator_id,
         buyerID: user.data.id,
@@ -266,7 +256,7 @@ export const comprarParticipacion = async (req: Request, res: Response) => {
     cuenta_participe = await prisma.cuentas_participes.update({
       where: { id: cuenta_participe.id },
       data: {
-        cantidad_restante: cuenta_participe.cantidad_restante - cantidad,
+        cantidad_restante: cuenta_participe.cantidad_restante - aportacion,
       },
     });
 
@@ -388,18 +378,12 @@ export const verCuentasParticipes = async (req: Request, res: Response) => {
         nombre_del_proyecto: cuenta.nombre_del_proyecto,
         descripcion: cuenta.descripcion,
         cantidad_a_vender: cuenta.cantidad_a_vender,
-        precio_unitario: cuenta.precio_unitario,
         cantidad_restante: cuenta.cantidad_restante,
         cesion: cuenta.cesion,
         duracion: cuenta.duracion,
-        remuneracion: cuenta.remuneracion,
-        resultado: cuenta.resultado,
         determinacion: cuenta.determinacion,
-        plazos_remuneracion: cuenta.plazos_remuneracion,
-        juridicion: cuenta.juridicion,
         fecha_lanzamiento: cuenta.fecha_lanzamiento,
         companyIDSeller: cuenta.companyIDSeller,
-        liquidacion: cuenta.liquidacion,
         clausulas: cuenta.clausulas,
         reventas: revende,
       });
@@ -590,7 +574,7 @@ export const aceptarComprasCuentaParticipe = async (
       CreditedUserId: mangopayIdSeller,
       DebitedFunds: {
         Currency: "EUR",
-        Amount: order.precio_total * 100,
+        Amount: order.aportacion * 100,
       },
       Fees: {
         Currency: "EUR",
@@ -709,8 +693,7 @@ export const signCompraDoc = async (req: Request, res: Response) => {
       const record = await prisma.record_participaciones.create({
         data: {
           participacion_id: participacion.id,
-          cantidad: participacion?.cantidad,
-          monto_pagado: participacion?.monto_pagado,
+          aportacion: participacion?.aportacion,
           old_document_id_first: participacion?.document_id_first,
           old_document_second: participacion.document_id_second,
           old_signature_id: participacion.signature_id,
@@ -726,7 +709,7 @@ export const signCompraDoc = async (req: Request, res: Response) => {
           document_id_first: order.documentId_first,
           document_id_second: order.documentId_second,
           signature_id: order.signatureId,
-          monto_pagado: order.precio_total,
+          aportacion: order.aportacion,
           cesion_is_allowed: cuenta.cesion,
         },
       });
@@ -734,8 +717,7 @@ export const signCompraDoc = async (req: Request, res: Response) => {
       participacion = await prisma.participacion.create({
         data: {
           cuenta_participe_id: cuenta.id,
-          cantidad: order.cantidad,
-          monto_pagado: order.precio_total,
+          aportacion: order.aportacion,
           document_id_first: order.documentId_first,
           document_id_second: order.documentId_second,
           signature_id: order.signatureId,
@@ -811,7 +793,7 @@ export const rechazarComprasCuentaParticipe = async (
       return res.status(400).json({ error: "Cuenta no encontrada" });
     await prisma.cuentas_participes.update({
       where: { id: order.cuenta_participe_id },
-      data: { cantidad_restante: cuenta?.cantidad_restante + order.cantidad },
+      data: { cantidad_restante: cuenta?.cantidad_restante + order.aportacion },
     });
     res.json(order);
   } catch (e) {
@@ -822,7 +804,7 @@ export const rechazarComprasCuentaParticipe = async (
 export const asignarCtaParticipe = async (req: Request, res: Response) => {
   // @ts-ignore
   const prisma = req.prisma as PrismaClient;
-  const { jwtUser, cuenta_participe_id, cantidad, user_id, user_cod } =
+  const { jwtUser, cuenta_participe_id, aportacion, user_id, user_cod } =
     req.body;
   let user;
   try {
@@ -865,8 +847,7 @@ export const asignarCtaParticipe = async (req: Request, res: Response) => {
 
   let order = await prisma.orders.create({
     data: {
-      precio_total: cantidad * cuenta.precio_unitario,
-      cantidad: cantidad,
+      aportacion,
       cuenta_participe_id: cuenta.id,
       buyerID: user_id,
       sellerID: user.data.id,
@@ -965,8 +946,7 @@ export const crearVentaDeParticipacion = async (
 
     const order = await prisma.orders.create({
       data: {
-        precio_total: precio,
-        cantidad: participacion.cantidad,
+        aportacion: precio,
         cuenta_participe_id: participacion.cuenta_participe_id,
         sellerID: participacion.owner_id,
         status: "VENTA_ACTIVA",
@@ -1096,7 +1076,7 @@ export const comprarParticipacionPorOrden = async (
         .status(400)
         .json({ error: "Faltan datos de usuario para poder comprar" });
 
-    if (funds.data.funds < order.precio_total)
+    if (funds.data.funds < order.aportacion)
       return res.status(400).json({ error: "Fondo insuficiente" });
     /// transferencia de mangopay de buyer a seller
     let mangopayIdSeller, mangopayWalletSeller;
@@ -1135,7 +1115,7 @@ export const comprarParticipacionPorOrden = async (
       CreditedUserId: mangopayIdSeller,
       DebitedFunds: {
         Currency: "EUR",
-        Amount: order.precio_total * 100,
+        Amount: order.aportacion * 100,
       },
       Fees: {
         Currency: "EUR",

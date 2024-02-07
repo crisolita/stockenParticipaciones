@@ -1345,18 +1345,13 @@ model cuentas_participes {
   nombre_del_proyecto String 
   descripcion         String
   cantidad_a_vender   Int
-  precio_unitario     Float
   cantidad_restante   Int
+  ticket_minimo      Float
   cesion              Boolean
   duracion            DateTime
-  remuneracion        String
-  resultado           String
   determinacion       String
-  plazos_remuneracion String
-  juridicion          String
   fecha_lanzamiento   DateTime
   companyIDSeller     Int
-  liquidacion         String
   clausulas           String?
   mangopay_transfers  mangopay_mangopaytransfer_cuenta_participe[]
   users_user          users_user                                   @relation(fields: [creator_id], references: [id])
@@ -1365,8 +1360,7 @@ model cuentas_participes {
 
 model orders {
   id                  Int                     @id @default(autoincrement())
-  precio_total        Float
-  cantidad            Int
+  aportacion        Float
   documentId_first    String?
   documentId_second   String?
   signatureId         String?
@@ -1403,8 +1397,7 @@ model orderNotaConvertible {
 model participacion {
   id                  Int                      @id @default(autoincrement())
   cuenta_participe_id Int
-  cantidad            Int
-  monto_pagado        Int
+  aportacion Float
   document_id_first   String
   document_id_second  String
   owner_id            Int
@@ -1446,8 +1439,7 @@ model mangopay_mangopaytransfer_cuenta_participe {
 model record_participaciones {
   id                    Int           @id @default(autoincrement())
   participacion_id      Int
-  cantidad              Int
-  monto_pagado          Int
+  aportacion Float
   old_document_id_first String
   old_document_second   String
   old_signature_id      String

@@ -8,13 +8,9 @@ export const querySchemaCrearCuentaPartiipe = Joi.object({
   precio_unitario: Joi.number().required(),
   cesion: Joi.boolean().required(),
   duracion: Joi.string().required(),
-  remuneracion: Joi.string().required(),
-  plazos_remuneracion: Joi.string().required(),
-  resultado: Joi.string().required(),
+  ticket_minimo: Joi.string().required(),
   determinacion: Joi.string().required(),
-  juridicion: Joi.string().required(),
   fecha_lanzamiento: Joi.string().required(),
-  liquidacion: Joi.string().required(),
   Clausulas: Joi.custom((value, helpers) => {
     // Aquí puedes implementar la lógica para validar el HTML
     // Por ejemplo, podrías utilizar una expresión regular para verificar si es HTML válido
@@ -27,7 +23,7 @@ export const querySchemaCrearCuentaPartiipe = Joi.object({
 });
 export const querySchemaComprarCP = Joi.object({
   participe_id: Joi.number().required(),
-  cantidad: Joi.number().required(),
+  aportacion: Joi.number().required(),
   jwtUser: Joi.string().required(),
   companyIdBuyer: Joi.number(),
 });
@@ -49,7 +45,7 @@ export const querySchemaVerCP = Joi.object({
 export const querySchemaAsignarCP = Joi.object({
   jwtCreador: Joi.string().required(),
   cuenta_participe_id: Joi.number().required(),
-  cantidad: Joi.number().required(),
+  aportacion: Joi.number().required(),
   user_id: Joi.number().required,
   companyIdBuyer: Joi.number(),
 });
