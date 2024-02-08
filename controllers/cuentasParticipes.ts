@@ -3,6 +3,7 @@ import { Request, Response, response } from "express";
 import axios from "axios";
 import mangopayInstance from "mangopay2-nodejs-sdk";
 import {
+  cancel,
   createDocReVenta,
   createSignature,
   isCompleted,
@@ -803,9 +804,14 @@ export const rechazarComprasCuentaParticipe = async (
       return res.status(400).json({ error: "Usuario no valido" });
 
     let order = await prisma.orders.findUnique({
-      where: { id: orderId, status: "SALDO_BLOQUEADO", sellerID: user.data.id },
+      where: { id: orderId, status: "PENDIENTE_FIRMA", sellerID: user.data.id },
     });
-    if (!order || order.sellerID != user.data.id || !order.buyerID)
+    if (
+      !order ||
+      order.sellerID != user.data.id ||
+      !order.buyerID ||
+      !order.signatureId
+    )
       return res.status(400).json({ error: "Orden no encontrada" });
 
     /// DESBLOQUEAR SALDO MANGOPAY
@@ -821,6 +827,7 @@ export const rechazarComprasCuentaParticipe = async (
         },
       }
     );
+    const cancelSignature = await cancel(order.signatureId);
     order = await prisma.orders.update({
       where: { id: order.id },
       data: { complete_at: new Date(), status: "RECHAZADA" },

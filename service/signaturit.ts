@@ -215,6 +215,11 @@ export const isCompleted = async (signatureId: string) => {
   console.log(data, "firma");
   return data;
 };
+export const cancel = async (signatureId: string) => {
+  const signature = await client.cancelSignature(signatureId);
+  console.log(signature);
+  return signature;
+};
 
 export const createDocReVenta = async (
   seller: users_user,
