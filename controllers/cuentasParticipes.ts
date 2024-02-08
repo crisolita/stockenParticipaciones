@@ -255,7 +255,7 @@ export const comprarParticipacion = async (req: Request, res: Response) => {
         buyerID: user.data.id,
         status: "SALDO_BLOQUEADO",
         bloqueo_id: bloqueoSaldo.data.id,
-        companyIdBuyer: companyIdBuyer ? companyIdBuyer : "",
+        companyIdBuyer: companyIdBuyer ? companyIdBuyer : null,
         create_date: new Date(),
         companyIdSeller: cuenta_participe.companyIDSeller,
       },
