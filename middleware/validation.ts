@@ -5,7 +5,6 @@ export const querySchemaCrearCuentaPartiipe = Joi.object({
   nombre_del_proyecto: Joi.string().required(),
   descripcion: Joi.string().required(),
   cantidad_a_vender: Joi.number().required(),
-  precio_unitario: Joi.number().required(),
   cesion: Joi.boolean().required(),
   duracion: Joi.string().required(),
   ticket_minimo: Joi.string().required(),
