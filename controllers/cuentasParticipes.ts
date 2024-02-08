@@ -222,6 +222,13 @@ export const comprarParticipacion = async (req: Request, res: Response) => {
     const company = await prisma.companies_company.findUnique({
       where: { id: cuenta_participe.companyIDSeller },
     });
+    const seller = await prisma.users_user.findUnique({
+      where: { id: cuenta_participe.creator_id },
+    });
+    if (!seller || !company)
+      return res
+        .status(404)
+        .json({ error: "Creador o compania no encontrado" });
     if (funds.data.funds < aportacion)
       return res.status(400).json({ error: "Fondo insuficiente" });
     // /bloquear saldo
@@ -239,7 +246,8 @@ export const comprarParticipacion = async (req: Request, res: Response) => {
         },
       }
     );
-    const order = await prisma.orders.create({
+
+    let order = await prisma.orders.create({
       data: {
         aportacion: aportacion,
         cuenta_participe_id: cuenta_participe.id,
@@ -247,10 +255,39 @@ export const comprarParticipacion = async (req: Request, res: Response) => {
         buyerID: user.data.id,
         status: "SALDO_BLOQUEADO",
         bloqueo_id: bloqueoSaldo.data.id,
+        companyIdBuyer: companyIdBuyer ? companyIdBuyer : "",
         create_date: new Date(),
         companyIdSeller: cuenta_participe.companyIDSeller,
       },
     });
+
+    try {
+      console.log("Hola");
+      const document = await createSignature(
+        order,
+        cuenta_participe,
+        user.data,
+        seller,
+        company,
+        prisma
+      );
+      order = await prisma.orders.update({
+        where: { id: order.id },
+        data: {
+          signatureId: document.id,
+          documentId_first: document.documents[0].id,
+          documentId_second: document.documents[1].id,
+          status: "PENDIENTE_FIRMA",
+        },
+      });
+      console.log("doc", document);
+      if (!document || !document.id)
+        return res.status(500).json({ error: "Error al crear documento" });
+    } catch (e) {
+      console.log(e);
+      return res.status(400).json(e);
+    }
+
     cuenta_participe = await prisma.cuentas_participes.update({
       where: { id: cuenta_participe.id },
       data: {
@@ -378,6 +415,7 @@ export const verCuentasParticipes = async (req: Request, res: Response) => {
         cantidad_a_vender: cuenta.cantidad_a_vender,
         cantidad_restante: cuenta.cantidad_restante,
         cesion: cuenta.cesion,
+        ticket_minimo: cuenta.ticket_minimo,
         duracion: cuenta.duracion,
         fecha_lanzamiento: cuenta.fecha_lanzamiento,
         companyIDSeller: cuenta.companyIDSeller,
@@ -463,7 +501,14 @@ export const aceptarComprasCuentaParticipe = async (
     let order = await prisma.orders.findUnique({
       where: { id: orderId, status: "SALDO_BLOQUEADO" },
     });
-    if (!order || order.sellerID != user.data.id || !order.buyerID)
+    if (
+      !order ||
+      order.sellerID != user.data.id ||
+      !order.buyerID ||
+      !order.signatureId ||
+      !order.documentId_first ||
+      !order.documentId_second
+    )
       return res.status(400).json({ error: "Orden no encontrada" });
     const cuenta = await prisma.cuentas_participes.findUnique({
       where: { id: order.cuenta_participe_id },
@@ -487,6 +532,9 @@ export const aceptarComprasCuentaParticipe = async (
     });
 
     if (!buyer) return res.status(400).json({ error: "Comprador no valido" });
+    const docCompleted = await isCompleted(order.signatureId);
+    if (docCompleted?.length < 2)
+      return res.status(400).json({ error: "Aun no han firmado ambas partes" });
     let desbloqueoSaldo;
     // / DESBLOQUEAR SALDO MANGOPAY Y ENVIARSELO A VENDEDOR
 
@@ -593,43 +641,38 @@ export const aceptarComprasCuentaParticipe = async (
         return false;
       }
     };
+    let participacion;
     try {
       // @ts-ignore
       const transferResponse = await createTransfer(myTransfer);
       if (!transferResponse || transferResponse.Status != "SUCCEEDED")
         return res.status(400).json({ error: "Transferencia ha fallado" });
-    } catch (e) {
-      console.log(e);
-      return res.status(500).json(e);
-    }
-    try {
-      console.log("Hola");
-      const document = await createSignature(
-        order,
-        cuenta,
-        buyer,
-        user.data,
-        company,
-        prisma
-      );
-      console.log("doc", document);
-      if (!document || !document.id)
-        return res.status(500).json({ error: "Error al crear documento" });
+      participacion = await prisma.participacion.create({
+        data: {
+          cuenta_participe_id: cuenta.id,
+          aportacion: order.aportacion,
+          document_id_first: order.documentId_first,
+          document_id_second: order.documentId_second,
+          signature_id: order.signatureId,
+          owner_id: buyer.id,
+          cesion_is_allowed: cuenta.cesion,
+          buy_date: new Date(),
+        },
+      });
       order = await prisma.orders.update({
         where: { id: order.id },
         data: {
-          signatureId: document.id,
-          documentId_first: document.documents[0].id,
-          documentId_second: document.documents[1].id,
-          status: "PENDIENTE_FIRMA",
+          status: "COMPRA_TERMINADA",
+          complete_at: new Date(),
+          participacion_id: participacion.id,
         },
       });
     } catch (e) {
       console.log(e);
-      return res.status(400).json(e);
+      return res.status(500).json(e);
     }
 
-    res.json(order);
+    res.json({ order, participacion });
   } catch (e) {
     console.log(e);
     res.status(500).json(e);
