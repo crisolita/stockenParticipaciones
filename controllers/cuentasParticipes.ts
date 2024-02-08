@@ -534,6 +534,7 @@ export const aceptarComprasCuentaParticipe = async (
 
     if (!buyer) return res.status(400).json({ error: "Comprador no valido" });
     const docCompleted = await isCompleted(order.signatureId);
+    console.log(docCompleted);
     if (docCompleted?.length < 2)
       return res.status(400).json({ error: "Aun no han firmado ambas partes" });
     let desbloqueoSaldo;
@@ -656,6 +657,7 @@ export const aceptarComprasCuentaParticipe = async (
           document_id_second: order.documentId_second,
           signature_id: order.signatureId,
           owner_id: buyer.id,
+          status: "ACTIVO",
           cesion_is_allowed: cuenta.cesion,
           buy_date: new Date(),
         },
@@ -751,6 +753,7 @@ export const signCompraDoc = async (req: Request, res: Response) => {
           document_id_second: order.documentId_second,
           signature_id: order.signatureId,
           aportacion: order.aportacion,
+          status: "ACTIVO",
           cesion_is_allowed: cuenta.cesion,
         },
       });
@@ -763,6 +766,7 @@ export const signCompraDoc = async (req: Request, res: Response) => {
           document_id_second: order.documentId_second,
           signature_id: order.signatureId,
           owner_id: buyer.id,
+          status: "ACTIVO",
           cesion_is_allowed: cuenta.cesion,
           buy_date: new Date(),
         },
@@ -942,7 +946,7 @@ export const crearVentaDeParticipacion = async (
       where: { id: participacion_id },
     });
     /// VALIDACION DEL CESION
-    if (!participacion)
+    if (!participacion || participacion.status !== "ACTIVO")
       return res.status(400).json({ error: "No existe cuenta participe" });
     //create bloqueo mangopay user
     const user = await axios.get(

@@ -204,7 +204,7 @@ export const createSignature = async (
 
 export const isCompleted = async (signatureId: string) => {
   const signature = await client.getSignature(signatureId);
-  let data = [{}];
+  let data = [];
   for (let docs of signature.documents) {
     if (docs.status == "completed") {
       data.push({
