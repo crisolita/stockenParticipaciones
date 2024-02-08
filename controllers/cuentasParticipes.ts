@@ -500,7 +500,7 @@ export const aceptarComprasCuentaParticipe = async (
     if (!user || user.data.status != "validated")
       return res.status(400).json({ error: "Usuario no valido" });
     let order = await prisma.orders.findUnique({
-      where: { id: orderId, status: "SALDO_BLOQUEADO" },
+      where: { id: orderId, status: "PENDIENTE_FIRMA" },
     });
     if (
       !order ||
