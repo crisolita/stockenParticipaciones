@@ -106,14 +106,16 @@ export const comprarNotaConvertible = async (req: Request, res: Response) => {
     // @ts-ignore
     const prisma = req.prisma as PrismaClient;
 
-    const { venta_id, cantidad, jwtUser, companyIdBuyer } = req.body;
+    let { venta_id, aportacion, jwtUser, companyIdBuyer } = req.body;
     let venta = await prisma.venta_de_notas_convertibles.findUnique({
       where: { id: venta_id },
     });
     if (!venta)
       return res.status(400).json({ error: "No existe cuenta participe" });
 
-    if (cantidad > venta.cantidad_restante)
+    if (venta.cantidad_restante <= venta.ticket_minimo) {
+      aportacion = venta.cantidad_restante;
+    } else if (aportacion > venta.cantidad_restante)
       return res
         .status(400)
         .json({ error: "No hay suficientes participaciones" });
@@ -153,6 +155,15 @@ export const comprarNotaConvertible = async (req: Request, res: Response) => {
       return res
         .status(404)
         .json({ error: "No hay datos de mangopay suficientes" });
+    let fiscalresidenceBuyer;
+    fiscalresidenceBuyer = await prisma.users_fiscalresidence.findFirst({
+      where: { user_id: user.data.id },
+    });
+    if (!fiscalresidenceBuyer)
+      return res
+        .status(404)
+        .json({ error: "Comprador no tiene fiscal residence" });
+
     if (companyIdBuyer) {
       const companyBuyer = await prisma.companies_company.findUnique({
         where: { id: companyIdBuyer },
@@ -169,17 +180,13 @@ export const comprarNotaConvertible = async (req: Request, res: Response) => {
           error: "Empresa no es del usuario o con datos de empresa faltante",
         });
     } else {
-      const fiscalresidence = await prisma.users_fiscalresidence.findFirst({
-        where: { user_id: user.data.id },
-      });
-
       if (
         !user.data.first_name ||
         !user.data.last_name ||
         // !user.data.marital_status ||
         // !user.data.profession ||
         !user.data.id_document_number ||
-        !fiscalresidence
+        !fiscalresidenceBuyer
       )
         return res
           .status(400)
@@ -188,13 +195,20 @@ export const comprarNotaConvertible = async (req: Request, res: Response) => {
     const company = await prisma.companies_company.findUnique({
       where: { id: venta.companyID },
     });
-    if (funds.data.funds < cantidad * venta.ticket_minimo)
+    const seller = await prisma.users_user.findUnique({
+      where: { id: venta.creador_id },
+    });
+    if (!seller)
+      return res.status(404).json({ error: "Vendedor no encontrado" });
+    if (!company)
+      return res.status(400).json({ error: "Compania no encontrada" });
+    if (funds.data.funds < aportacion)
       return res.status(400).json({ error: "Fondo insuficiente" });
     // /bloquear saldo
     const bloqueoSaldo = await axios.post(
       "https://pro.stockencapital.com/api/v1/moneyblocks/create_money_block/",
       {
-        blocked_amount: cantidad * venta.ticket_minimo,
+        blocked_amount: aportacion,
         user_cod: user.data.cod,
         company_cod: company?.cod,
         status: "PROCESSING",
@@ -205,10 +219,9 @@ export const comprarNotaConvertible = async (req: Request, res: Response) => {
         },
       }
     );
-    const order = await prisma.orderNotaConvertible.create({
+    let order = await prisma.orderNotaConvertible.create({
       data: {
-        precio_total: cantidad * venta.ticket_minimo,
-        cantidad: cantidad,
+        aportacion,
         venta_nc_id: venta.id,
         sellerId: venta.creador_id,
         buyerId: user.data.id,
@@ -218,10 +231,40 @@ export const comprarNotaConvertible = async (req: Request, res: Response) => {
         companyIdBuyer: companyIdBuyer,
       },
     });
+    //documento aqui
+
+    try {
+      console.log("Hola");
+      const document = await createDocNotaConvertible(
+        seller,
+        user.data,
+        fiscalresidenceBuyer,
+        order,
+        company,
+        venta,
+        prisma
+      );
+      console.log("doc", document);
+      if (!document || !document.id)
+        return res.status(500).json({ error: "Error al crear documento" });
+      order = await prisma.orderNotaConvertible.update({
+        where: { id: order.id },
+        data: {
+          signature_id: document.id,
+          document_id_first: document.documents[0].id,
+          document_id_second: document.documents[1].id,
+          status: "PENDIENTE_FIRMA",
+        },
+      });
+    } catch (e) {
+      console.log(e);
+      return res.status(400).json(e);
+    }
+
     venta = await prisma.venta_de_notas_convertibles.update({
       where: { id: venta.id },
       data: {
-        cantidad_restante: venta.cantidad_restante - cantidad,
+        cantidad_restante: venta.cantidad_restante - aportacion,
       },
     });
 
@@ -251,7 +294,7 @@ export const rechazarCompraNotaConvertible = async (
       return res.status(400).json({ error: "Usuario no valido" });
 
     let order = await prisma.orderNotaConvertible.findUnique({
-      where: { id: orderId, status: "SALDO_BLOQUEADO", sellerId: user.data.id },
+      where: { id: orderId, status: "PENDIENTE_FIRMA", sellerId: user.data.id },
     });
     if (!order || order.sellerId != user.data.id || !order.buyerId)
       return res.status(400).json({ error: "Orden no encontrada" });
@@ -283,7 +326,7 @@ export const rechazarCompraNotaConvertible = async (
       return res.status(400).json({ error: "Cuenta no encontrada" });
     await prisma.venta_de_notas_convertibles.update({
       where: { id: order.venta_nc_id },
-      data: { cantidad_restante: cuenta?.cantidad_restante + order.cantidad },
+      data: { cantidad_restante: cuenta?.cantidad_restante + order.aportacion },
     });
     res.json(order);
   } catch (e) {
@@ -317,13 +360,14 @@ export const aceptarCompraNotaConvertible = async (
     if (!user || user.data.status != "validated")
       return res.status(400).json({ error: "Usuario no valido" });
     let order = await prisma.orderNotaConvertible.findUnique({
-      where: { id: orderId, status: "SALDO_BLOQUEADO" },
+      where: { id: orderId, status: "PENDIENTE_FIRMA" },
     });
     if (
       !order ||
       order.sellerId != user.data.id ||
       !order.buyerId ||
-      !order.venta_nc_id
+      !order.venta_nc_id ||
+      !order.signature_id
     )
       return res.status(400).json({ error: "Orden no encontrada" });
     const venta = await prisma.venta_de_notas_convertibles.findUnique({
@@ -349,14 +393,6 @@ export const aceptarCompraNotaConvertible = async (
 
     if (!buyer) return res.status(400).json({ error: "Comprador no valido" });
 
-    const fiscalresidenceBuyer = await prisma.users_fiscalresidence.findFirst({
-      where: { user_id: buyer.id },
-    });
-    if (!fiscalresidenceBuyer)
-      return res
-        .status(400)
-        .json({ error: "No hay residencia fiscal del comprados" });
-
     let desbloqueoSaldo;
     // / DESBLOQUEAR SALDO MANGOPAY Y ENVIARSELO A VENDEDOR
 
@@ -377,7 +413,9 @@ export const aceptarCompraNotaConvertible = async (
       console.log(e);
       return res.status(500).json({ error: "Error desbloqueando el saldo" });
     }
-    // console.log("QEEEE LOCOO");
+    const docCompleted = await isCompleted(order.signature_id);
+    if (docCompleted.length < 2)
+      return res.status(400).json({ error: "Aun no han firmado ambas partes" });
     /// transferencia de mangopay de buyer a seller
     let mangopayIdBuyer,
       mangopayIdSeller,
@@ -441,7 +479,7 @@ export const aceptarCompraNotaConvertible = async (
       CreditedUserId: mangopayIdSeller,
       DebitedFunds: {
         Currency: "EUR",
-        Amount: order.precio_total * 100,
+        Amount: order.aportacion * 100,
       },
       Fees: {
         Currency: "EUR",
@@ -463,41 +501,43 @@ export const aceptarCompraNotaConvertible = async (
         return false;
       }
     };
+    let nota;
     try {
       // @ts-ignore
       const transferResponse = await createTransfer(myTransfer);
       if (!transferResponse || transferResponse.Status != "SUCCEEDED")
         return res.status(400).json({ error: "Transferencia ha fallado" });
-    } catch (e) {
-      console.log(e);
-      return res.status(500).json(e);
-    }
-    try {
-      console.log("Hola");
-      const document = await createDocNotaConvertible(
-        user.data,
-        buyer,
-        fiscalresidenceBuyer,
-        order,
-        company,
-        venta,
-        prisma
-      );
-      console.log("doc", document);
-      if (!document || !document.id)
-        return res.status(500).json({ error: "Error al crear documento" });
+      nota = await prisma.nota_convertible.create({
+        data: {
+          valor: order.aportacion,
+          venta_nc_id: venta.id,
+          document_id_first: order.document_id_first,
+          document_id_second: order.document_id_second,
+          signature_id: order.signature_id,
+          buy_date: new Date(),
+          interes_fijo: venta.interes_fijo,
+          interes_variable: venta.interes_variable,
+          vence_date: venta.vence_date,
+          tasa_descuento: venta.tasa_descuento,
+          capitulacion: venta.capitulacion,
+          CAP_no_ronda: venta.CAP_no_ronda,
+          floor: venta.floor,
+          fecha_devolucion: venta.fecha_devolucion,
+          negociar: venta.negociar,
+          owner_id: buyer.id,
+        },
+      });
       order = await prisma.orderNotaConvertible.update({
         where: { id: order.id },
         data: {
-          signature_id: document.id,
-          document_id_first: document.documents[0].id,
-          document_id_second: document.documents[1].id,
-          status: "PENDIENTE_FIRMA",
+          complete_at: new Date(),
+          nota_convertible_id: nota.id,
+          status: "COMPRA_TERMINADA",
         },
       });
     } catch (e) {
       console.log(e);
-      return res.status(400).json(e);
+      return res.status(500).json(e);
     }
 
     res.json(order);
@@ -554,7 +594,7 @@ export const signCompraDoc = async (req: Request, res: Response) => {
 
     nota = await prisma.nota_convertible.create({
       data: {
-        valor: order.precio_total,
+        valor: order.aportacion,
         venta_nc_id: venta.id,
         document_id_first: order.document_id_first,
         document_id_second: order.document_id_second,
@@ -590,7 +630,7 @@ export const signCompraDoc = async (req: Request, res: Response) => {
 export const asignarNota = async (req: Request, res: Response) => {
   // @ts-ignore
   const prisma = req.prisma as PrismaClient;
-  const { jwtCreador, venta_nc_id, cantidad, user_id, user_cod } = req.body;
+  const { jwtCreador, venta_nc_id, aportacion, user_id, user_cod } = req.body;
   let user;
   try {
     user = await axios.get("https://pro.stockencapital.com/api/v1/users/me/", {
@@ -639,8 +679,7 @@ export const asignarNota = async (req: Request, res: Response) => {
       .json({ error: "Usuario debe tener residencia fiscal" });
   let order = await prisma.orderNotaConvertible.create({
     data: {
-      precio_total: cantidad * venta.ticket_minimo,
-      cantidad: cantidad,
+      aportacion,
       venta_nc_id: venta.id,
       buyerId: user_id,
       sellerId: user.data.id,

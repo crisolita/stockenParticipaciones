@@ -1378,8 +1378,7 @@ model orders {
 model orderNotaConvertible {
   id                  Int                     @id @default(autoincrement())
   nota_convertible_id Int?
-  cantidad            Int
-  precio_total        Float
+  aportacion        Float
   venta_nc_id         Int?
   signature_id        String?
   document_id_first   String?
@@ -1449,13 +1448,14 @@ model record_participaciones {
 
 model venta_de_notas_convertibles {
   id                Int        @id @default(autoincrement())
-  cantidad_a_vender Int
-  cantidad_restante Int
+  cantidad_a_vender Float
+  cantidad_restante Float
   ticket_minimo     Float
   creador_id        Int
   companyID         Int
   interes_fijo      Float?
   interes_variable  Float?
+  tipodeinteres     Tipodeinteres?
   vence_date        DateTime?
   vence_cantidad    Int?
   tasa_descuento    Float?
@@ -1489,10 +1489,6 @@ model nota_convertible {
   user               users_user @relation(fields: [owner_id], references: [id])
 }
 
-model nombre {
-  id    Int   @id @default(autoincrement())
-  valor Float
-}
 
 enum StatusOrderCtaParticipe {
   VENTA_ACTIVA
@@ -1506,4 +1502,9 @@ enum StatusActivo {
   ACTIVO
   FINALIZADO
   CANCELADO
+}
+enum Tipodeinteres {
+  FIJO
+  VARIABLE
+  COMPUESTO
 }

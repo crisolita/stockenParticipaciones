@@ -375,15 +375,13 @@ export const createDocNotaConvertible = async (
       Client_datos: companyBuyer
         ? textoClienteEmpresa(buyer, companySeller)
         : textoClientePersona(buyer, fiscalresidenceBuyer),
-      Client_aporte: order.precio_total,
+      Client_aporte: order.aportacion,
       nc_interes_fijo: venta.interes_fijo,
       nc_interes_variable: venta.interes_variable,
       nc_limite_intereses: "",
       fecha_vencimiento: new Date(venta.vence_date ? venta.vence_date : ""),
       importe_ronda_letra: "",
-      importe_ronda_cifra: "",
       importe_cap_no_ronda: venta.CAP_no_ronda,
-      importe_cap_no_ronda_cifra: "",
       Amortizacion: amortizacion(
         venta.tasa_descuento ? true : false,
         "importe_cap",
