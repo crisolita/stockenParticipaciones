@@ -8,7 +8,6 @@ export const querySchemaCrearCuentaPartiipe = Joi.object({
   cesion: Joi.boolean().required(),
   duracion: Joi.string().required(),
   ticket_minimo: Joi.string().required(),
-  determinacion: Joi.string().required(),
   fecha_lanzamiento: Joi.string().required(),
   Clausulas: Joi.custom((value, helpers) => {
     // Aquí puedes implementar la lógica para validar el HTML

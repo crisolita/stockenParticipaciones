@@ -31,7 +31,6 @@ export const crearCuentaParticipe = async (req: Request, res: Response) => {
       cesion,
       ticket_minimo,
       duracion,
-      determinacion,
       fecha_lanzamiento,
       Clausulas,
     } = req.body;
@@ -113,7 +112,6 @@ export const crearCuentaParticipe = async (req: Request, res: Response) => {
         cantidad_restante: cantidad_a_vender,
         cesion,
         duracion: new Date(duracion),
-        determinacion,
         ticket_minimo,
         clausulas: Clausulas,
         companyIDSeller: company.id,
@@ -381,7 +379,6 @@ export const verCuentasParticipes = async (req: Request, res: Response) => {
         cantidad_restante: cuenta.cantidad_restante,
         cesion: cuenta.cesion,
         duracion: cuenta.duracion,
-        determinacion: cuenta.determinacion,
         fecha_lanzamiento: cuenta.fecha_lanzamiento,
         companyIDSeller: cuenta.companyIDSeller,
         clausulas: cuenta.clausulas,

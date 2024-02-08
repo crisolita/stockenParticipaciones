@@ -1349,7 +1349,6 @@ model cuentas_participes {
   ticket_minimo      Float
   cesion              Boolean
   duracion            DateTime
-  determinacion       String
   fecha_lanzamiento   DateTime
   companyIDSeller     Int
   clausulas           String?
