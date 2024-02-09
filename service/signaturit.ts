@@ -2,6 +2,7 @@
 import SignaturitClient from "signaturit-sdk";
 import {
   PrismaClient,
+  Tipodeinteres,
   companies_company,
   cuentas_participes,
   orderNotaConvertible,
@@ -316,35 +317,64 @@ export const floor = (floor: string, floor_cifra: number) => {
   En cualquier caso, la valoración resultante mínima de referencia que resultará aplicable (también denominada “Floor”) para la conversión, no podrá ser inferior a ${floor} euros (${floor_cifra} €).
   La conversión tendrá lugar con carácter inmediatamente anterior a la ejecución de la ampliación que la haya motivado.`;
 };
-export const devolucion = (
-  devol: boolean,
-  numero_meses: number,
-  numero_meses_string: string
-) => {
+export const devolucion = (devol: boolean, numero_meses: number) => {
   return devol
     ? `DEVOLUCIÓN.
-  El Prestamista concede a la Sociedad una carencia de ${numero_meses_string} (${numero_meses}) meses a contar desde la fecha de firma del presente Contrato para la devolución del principal y en el pago de los intereses del Préstamo. 
+  El Prestamista concede a la Sociedad una carencia de (${numero_meses}) meses a contar desde la fecha de firma del presente Contrato para la devolución del principal y en el pago de los intereses del Préstamo. 
   A la fecha de vencimiento del referido periodo de carencia, siempre y cuando el Prestamista no haya comunicado su intención de capitalizar el Préstamo, la Sociedad deberá pagar al Prestamista,
   mediante pago único, el principal con adición de los intereses devengados conforme a la cláusula 3 anterior.`
     : `Dada la naturaleza del Préstamo, la Sociedad no lo podrá amortizar anticipadamente, ya sea de forma parcial o total, excepto que la amortización se haga mediante la conversión del Préstamo en participaciones de la Sociedad, de acuerdo con lo dispuesto en la Cláusula 5.`;
 };
+export const interes = (
+  type: Tipodeinteres | null,
+  interes_fijo: number,
+  interes_variable: number
+) => {
+  return type == "COMPUESTO"
+    ? `Límite de los intereses: el importe total de los intereses devengados cada año (fijo + variable) no sobrepasará una rentabilidad máxima equivalente al ${
+        interes_fijo + interes_variable
+      }% anual del saldo medio pendiente de amortizar del año natural anterior.`
+    : type == "VARIABLE"
+      ? ` Variable: ${interes_variable} anual del beneficio antes de
+  impuestos (BAI) obtenido por la Sociedad durante el ejercicio
+  inmediatamente anterior al devengo de los intereses variables. Los
+  intereses variables se devengarán el día en que la Junta General de
+  Socios de la Sociedad apruebe el resultado del ejercicio anterior y en
+  su defecto, el 30 de junio de cada año y serán pagaderos a la fecha de
+  vencimiento; no obstante, en caso de que la fecha de vencimiento fuera
+  anterior a la fecha de aprobación de las cuentas anuales del ejercicio
+  inmediato anterior o, en su defecto, el 30 de junio de ese año, los
+  intereses variables se devengarán a la fecha de aprobación de las
+  cuentas anuales o el 30 de junio de ese ejercicio, la que antes
+  tuviera lugar, y serán pagaderos en el plazo de un (1) mes desde la
+  fecha de su devengo. Todo ello salvo que el Préstamo se capitalice, en
+  cuyo caso el 100% de los intereses variables devengados hasta la fecha
+  de capitalización se pagarán en participaciones sociales de la
+  Sociedad conforme se indica en la Cláusula 6 siguiente y los intereses
+  variables no devengados se pagarán conforme se indica en el párrafo
+  anterior.`
+      : `Fijo: ${interes_fijo} anual. Se devengará diariamente y liquidará
+      y será pagadero a la fecha de vencimiento, salvo que el Préstamo se
+      capitalice, en cuyo caso el 100% del interés fijo devengado hasta la
+      fecha de capitalización se pagará en participaciones sociales de la
+      Sociedad conforme se indica en la cláusula 5 siguiente.`;
+};
 export const amortizacion = (
   descuento: boolean,
-  importe_cap_letras: string,
-  importe_cap_cifra: number,
+  importe_cap_cifra: string,
   porcentaje_string?: number | null
 ) => {
   return descuento
-    ? `En caso de que la conversión del Préstamo (principal + intereses devengados) tenga lugar en el marco de una ronda de inversión cualificada de la Operación de Financiación, de al menos ${importe_cap_letras} euros (${importe_cap_cifra}.-€),
+    ? `En caso de que la conversión del Préstamo (principal + intereses devengados) tenga lugar en el marco de una ronda de inversión cualificada de la Operación de Financiación, de al menos (${importe_cap_cifra}.-€),
     la Prestamista convertirá el importe del Préstamo en capital social de la Sociedad por el número de participaciones que resulte de valorar la Sociedad a la valoración más baja entre:
 
     A) La valoración final de la ronda de inversión en curso, después de aplicar un descuento de  ${porcentaje_string} (X%) anual, respecto del valor final de la ronda de inversión, calculado día a día entre la fecha del desembolso del importe de este Préstamo y el día de cierre de la ronda de inversión ; y 
     
-    B) Una valoración máxima de  ${importe_cap_letras} euros (${importe_cap_cifra}.-€) (“CAP”).`
+    B) Una valoración máxima de  (${importe_cap_cifra}.-€) (“CAP”).`
     : `
     En caso de que la conversión del Préstamo (principal + intereses devengados) tenga lugar en el marco de una ronda de inversión cualificada de la Operación de Financiación, de al menos IMPORTE RONDA LETRAS euros (IMPORTE RONDA CIFRAS.-€).
     
-    En todo caso, si tras calcular la valoración pre-money de la Sociedad tomando como precio por participación el calculado conforme al párrafo anterior, ésta fuese superior a ${importe_cap_letras} euros (${importe_cap_cifra}.-€) el Préstamo (principal+ intereses devengados) se capitalizará a dicha valoración (“CAP”).)`;
+    En todo caso, si tras calcular la valoración pre-money de la Sociedad tomando como precio por participación el calculado conforme al párrafo anterior, ésta fuese superior a  (${importe_cap_cifra}.-€) el Préstamo (principal+ intereses devengados) se capitalizará a dicha valoración (“CAP”).)`;
 };
 export const createDocNotaConvertible = async (
   seller: users_user,
@@ -376,16 +406,17 @@ export const createDocNotaConvertible = async (
         ? textoClienteEmpresa(buyer, companySeller)
         : textoClientePersona(buyer, fiscalresidenceBuyer),
       Client_aporte: order.aportacion,
-      nc_interes_fijo: venta.interes_fijo,
-      nc_interes_variable: venta.interes_variable,
-      nc_limite_intereses: "",
+      intereses: interes(
+        venta.tipodeinteres,
+        venta.interes_fijo ? venta.interes_fijo : 0,
+        venta.interes_variable ? venta.interes_variable : 0
+      ),
       fecha_vencimiento: new Date(venta.vence_date ? venta.vence_date : ""),
-      importe_ronda_letra: "",
+      importe_ronda_letra: venta.capitulacion,
       importe_cap_no_ronda: venta.CAP_no_ronda,
       Amortizacion: amortizacion(
         venta.tasa_descuento ? true : false,
-        "importe_cap",
-        33,
+        venta.capitulacion ? venta.capitulacion : "0",
         venta.tasa_descuento
       ),
       floor: venta.floor ? floor(venta.floor, Number(venta.floor)) : "",
@@ -393,8 +424,7 @@ export const createDocNotaConvertible = async (
         venta.fecha_devolucion ? true : false,
         new Date(
           venta.fecha_devolucion ? venta.fecha_devolucion : ""
-        ).getMonth(),
-        "meses en letra"
+        ).getMonth()
       ),
     };
     // Ajusta las opciones según tus necesidades

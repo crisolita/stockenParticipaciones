@@ -85,7 +85,7 @@ export const querySchemaCrearVentaNC = Joi.object({
 });
 export const querySchemaComprarNC = Joi.object({
   venta_id: Joi.number().required(),
-  cantidad: Joi.number().required(),
+  aportacion: Joi.number().required(),
   jwtUser: Joi.string().required(),
   companyIdBuyer: Joi.number(),
 });
@@ -107,7 +107,7 @@ export const querySchemaVerNC = Joi.object({
 export const querySchemaAsignarNC = Joi.object({
   jwtCreador: Joi.string().required(),
   venta_nc_id: Joi.number().required(),
-  cantidad: Joi.number().required(),
+  aportacion: Joi.number().required(),
   user_id: Joi.number().required(),
   companyIdBuyer: Joi.number(),
 });

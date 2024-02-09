@@ -3,7 +3,11 @@ import { Request, Response, response } from "express";
 import axios from "axios";
 import mangopayInstance from "mangopay2-nodejs-sdk";
 import { crearVentaNotaConvertible } from "../service/notasConvertibles";
-import { createDocNotaConvertible, isCompleted } from "../service/signaturit";
+import {
+  cancel,
+  createDocNotaConvertible,
+  isCompleted,
+} from "../service/signaturit";
 const mangopay = new mangopayInstance({
   clientId: process.env.CLIENT_ID_MANGOPAY as string,
   clientApiKey: process.env.API_KEY_MANGOPAY as string,
@@ -296,7 +300,12 @@ export const rechazarCompraNotaConvertible = async (
     let order = await prisma.orderNotaConvertible.findUnique({
       where: { id: orderId, status: "PENDIENTE_FIRMA", sellerId: user.data.id },
     });
-    if (!order || order.sellerId != user.data.id || !order.buyerId)
+    if (
+      !order ||
+      order.sellerId != user.data.id ||
+      !order.buyerId ||
+      !order.signature_id
+    )
       return res.status(400).json({ error: "Orden no encontrada" });
 
     /// DESBLOQUEAR SALDO MANGOPAY
@@ -312,6 +321,7 @@ export const rechazarCompraNotaConvertible = async (
         },
       }
     );
+    const cancelSignNC = await cancel(order.signature_id);
     order = await prisma.orderNotaConvertible.update({
       where: { id: order.id },
       data: { complete_at: new Date(), status: "RECHAZADA" },
