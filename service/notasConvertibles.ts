@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Tipodeinteres } from "@prisma/client";
 // replace it with your API key
 
 export const crearVentaNotaConvertible = async (
@@ -14,6 +14,7 @@ export const crearVentaNotaConvertible = async (
     capitulacion?: string;
     CAP_no_ronda?: string;
     floor?: string;
+    tipodeinteres: Tipodeinteres;
     fecha_devolucion?: Date;
     negociar: boolean;
     creador_id: number;

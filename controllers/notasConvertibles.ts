@@ -27,6 +27,7 @@ export const crearNotaConvertible = async (req: Request, res: Response) => {
       vence_date,
       vence_cantidad,
       tasa_descuento,
+      tipodeinteres,
       capitulacion,
       CAP_no_ronda,
       floor,
@@ -89,6 +90,7 @@ export const crearNotaConvertible = async (req: Request, res: Response) => {
         tasa_descuento,
         capitulacion,
         CAP_no_ronda,
+        tipodeinteres,
         floor,
         fecha_devolucion: fecha_devolucion
           ? new Date(fecha_devolucion)
