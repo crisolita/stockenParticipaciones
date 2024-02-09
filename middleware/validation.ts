@@ -74,6 +74,7 @@ export const querySchemaCrearVentaNC = Joi.object({
   ticket_minimo: Joi.number().required(),
   interes_fijo: Joi.number(),
   interes_variable: Joi.number(),
+  tipodeinteres: Joi.string().required(),
   vence_date: Joi.string(),
   vence_cantidad: Joi.number(),
   tasa_descuento: Joi.number(),
