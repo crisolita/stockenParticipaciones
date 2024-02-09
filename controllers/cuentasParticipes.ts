@@ -326,10 +326,10 @@ export const verOrdenesBySell = async (req: Request, res: Response) => {
     }
 
     //create bloqueo mangopay user
-    let saldoBloqueado = [{}];
-    let finalizadas = [{}];
-    let porFirmarVendedor = [{}];
-    let ventasActivas = [{}];
+    let saldoBloqueado = [];
+    let finalizadas = [];
+    let porFirmarVendedor = [];
+    let ventasActivas = [];
 
     saldoBloqueado.push(
       await prisma.orders.findMany({
