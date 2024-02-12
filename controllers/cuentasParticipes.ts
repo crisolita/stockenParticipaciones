@@ -10,6 +10,7 @@ import {
 } from "../service/signaturit";
 //@ts-ignore
 import SignaturitClient from "signaturit-sdk";
+import { uploadMedia } from "../service/aws";
 const API_KEY = process.env.SIGNATURITKEY;
 const ENV = process.env.ENV;
 
@@ -33,6 +34,7 @@ export const crearCuentaParticipe = async (req: Request, res: Response) => {
       ticket_minimo,
       duracion,
       fecha_lanzamiento,
+      media,
       Clausulas,
     } = req.body;
     let user;
@@ -104,7 +106,7 @@ export const crearCuentaParticipe = async (req: Request, res: Response) => {
     )
       return res.status(400).json({ error: "Informacion de empresa faltante" });
     /// validar que la empresa tenga mangopay ID
-    const cuenta = await prisma.cuentas_participes.create({
+    let cuenta = await prisma.cuentas_participes.create({
       data: {
         creator_id: user.data.id,
         nombre_del_proyecto,
@@ -119,8 +121,30 @@ export const crearCuentaParticipe = async (req: Request, res: Response) => {
         fecha_lanzamiento: new Date(fecha_lanzamiento),
       },
     });
+    let medias = [];
+    if (media) {
+      for (let med of media) {
+        let path = `media_${cuenta.nombre_del_proyecto}_${med.type}_${
+          cuenta.id
+        }_${cuenta.countMedia ? cuenta.countMedia + 1 : 1}`;
+        cuenta = await prisma.cuentas_participes.update({
+          where: { id: cuenta.id },
+          data: { countMedia: cuenta.countMedia ? cuenta.countMedia + 1 : 1 },
+        });
+        let saveMedia = await prisma.media.create({
+          data: {
+            cuenta_participe_id: cuenta.id,
+            path,
+            type: med.type,
+          },
+        });
+        medias.push(saveMedia);
+        let data = Buffer.from(med.base64, "base64");
+        await uploadMedia(data, path);
+      }
+    }
 
-    res.json(cuenta);
+    res.json({ cuenta, medias });
   } catch (e) {
     console.log(e);
     res.status(500).json(e);

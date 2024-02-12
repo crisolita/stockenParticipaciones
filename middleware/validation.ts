@@ -9,6 +9,12 @@ export const querySchemaCrearCuentaPartiipe = Joi.object({
   duracion: Joi.string().required(),
   ticket_minimo: Joi.number().required(),
   fecha_lanzamiento: Joi.string().required(),
+  media: Joi.array().items(
+    Joi.object({
+      type: Joi.string().required(),
+      base64: Joi.string().required(),
+    })
+  ),
   Clausulas: Joi.custom((value, helpers) => {
     // Aquí puedes implementar la lógica para validar el HTML
     // Por ejemplo, podrías utilizar una expresión regular para verificar si es HTML válido

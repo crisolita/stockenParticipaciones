@@ -1342,24 +1342,26 @@ model votes_vote {
 model cuentas_participes {
   id                  Int                                          @id @default(autoincrement())
   creator_id          Int
-  nombre_del_proyecto String 
+  nombre_del_proyecto String
   descripcion         String
   cantidad_a_vender   Int
   cantidad_restante   Int
-  ticket_minimo      Float
+  ticket_minimo       Float
   cesion              Boolean
   duracion            DateTime
   fecha_lanzamiento   DateTime
   companyIDSeller     Int
   clausulas           String?
+  countMedia          Int?
   mangopay_transfers  mangopay_mangopaytransfer_cuenta_participe[]
   users_user          users_user                                   @relation(fields: [creator_id], references: [id])
   paticipacion        participacion[]
+  media               media[]
 }
 
 model orders {
   id                  Int                     @id @default(autoincrement())
-  aportacion        Float
+  aportacion          Float
   documentId_first    String?
   documentId_second   String?
   signatureId         String?
@@ -1378,7 +1380,7 @@ model orders {
 model orderNotaConvertible {
   id                  Int                     @id @default(autoincrement())
   nota_convertible_id Int?
-  aportacion        Float
+  aportacion          Float
   venta_nc_id         Int?
   signature_id        String?
   document_id_first   String?
@@ -1393,20 +1395,20 @@ model orderNotaConvertible {
 }
 
 model participacion {
-  id                  Int                      @id @default(autoincrement())
+  id                  Int           @id @default(autoincrement())
   cuenta_participe_id Int
-  aportacion Float
+  aportacion          Float
   document_id_first   String
   document_id_second  String
   owner_id            Int
   signature_id        String
   buy_date            DateTime
   cesion_is_allowed   Boolean?
-    status              StatusActivo?
+  status              StatusActivo?
 
-  records             record_participaciones[]
-  users_user          users_user               @relation(fields: [owner_id], references: [id])
-  cuentas_participes  cuentas_participes       @relation(fields: [cuenta_participe_id], references: [id])
+  records            record_participaciones[]
+  users_user         users_user               @relation(fields: [owner_id], references: [id])
+  cuentas_participes cuentas_participes       @relation(fields: [cuenta_participe_id], references: [id])
 }
 
 model mangopay_basemangopaytransaction_cuenta_participe {
@@ -1437,7 +1439,7 @@ model mangopay_mangopaytransfer_cuenta_participe {
 model record_participaciones {
   id                    Int           @id @default(autoincrement())
   participacion_id      Int
-  aportacion Float
+  aportacion            Float
   old_document_id_first String
   old_document_second   String
   old_signature_id      String
@@ -1447,7 +1449,7 @@ model record_participaciones {
 }
 
 model venta_de_notas_convertibles {
-  id                Int        @id @default(autoincrement())
+  id                Int            @id @default(autoincrement())
   cantidad_a_vender Float
   cantidad_restante Float
   ticket_minimo     Float
@@ -1464,11 +1466,11 @@ model venta_de_notas_convertibles {
   floor             String?
   fecha_devolucion  DateTime?
   negociar          Boolean?
-  user              users_user @relation(fields: [creador_id], references: [id])
+  user              users_user     @relation(fields: [creador_id], references: [id])
 }
 
 model nota_convertible {
-  id                 Int        @id @default(autoincrement())
+  id                 Int           @id @default(autoincrement())
   valor              Float
   venta_nc_id        Int?
   document_id_first  String?
@@ -1485,10 +1487,17 @@ model nota_convertible {
   fecha_devolucion   DateTime?
   negociar           Boolean?
   owner_id           Int
-  status              StatusActivo?
-  user               users_user @relation(fields: [owner_id], references: [id])
+  status             StatusActivo?
+  user               users_user    @relation(fields: [owner_id], references: [id])
 }
 
+model media {
+  id                  Int                @id @default(autoincrement())
+  cuenta_participe_id Int
+  path                String
+  type                TypeOfMedia
+  cuenta_participe    cuentas_participes @relation(fields: [cuenta_participe_id], references: [id])
+}
 
 enum StatusOrderCtaParticipe {
   VENTA_ACTIVA
@@ -1503,8 +1512,15 @@ enum StatusActivo {
   FINALIZADO
   CANCELADO
 }
+
 enum Tipodeinteres {
   FIJO
   VARIABLE
   COMPUESTO
+}
+
+enum TypeOfMedia {
+  IMAGE
+  DOC
+  LINK
 }
