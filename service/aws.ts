@@ -12,7 +12,7 @@ AWS.config.update({
   secretAccessKey: process.env.SECRETACCESSKEYBUCKET,
 });
 // Subir una imagen
-export const uploadMedia = async (key: ArrayBuffer, ruta: string) => {
+export const uploadImage = async (key: ArrayBuffer, ruta: string) => {
   const stream = new Readable();
   stream.push(Buffer.from(key));
   stream.push(null);
@@ -29,14 +29,40 @@ export const uploadMedia = async (key: ArrayBuffer, ruta: string) => {
     }
   });
 };
+export const uploadDoc = async (key: ArrayBuffer, ruta: string) => {
+  const stream = new Readable();
+  stream.push(Buffer.from(key));
+  stream.push(null);
+  const params = {
+    Bucket: "blockimpulse-bucket-for-objects-uploading",
+    Key: `${ruta}.pdf`,
+    Body: stream,
+  };
+  s3.upload(params, function (err: any, data: any) {
+    if (err) {
+      console.error("Error al subir la imagen:", err);
+    } else {
+      console.log("Imagen subida:", data.Location);
+    }
+  });
+};
+
 // Obtener una imagen
-export const getMedia = async (key: string) => {
+export const getImage = async (key: string) => {
   const getObjectParams = {
     Bucket: "blockimpulse-bucket-for-objects-uploading",
     Key: `${key}.jpg`,
   };
   const imageUrl = s3.getSignedUrl("getObject", getObjectParams);
   return imageUrl;
+};
+export const getDoc = async (key: string) => {
+  const getObjectParams = {
+    Bucket: "blockimpulse-bucket-for-objects-uploading",
+    Key: `${key}.pdf`,
+  };
+  const docUrl = s3.getSignedUrl("getObject", getObjectParams);
+  return docUrl;
 };
 /// borrar una imagen
 export const deleteMediaAWS = async (key: string) => {

@@ -8,7 +8,7 @@ import {
   createDocNotaConvertible,
   isCompleted,
 } from "../service/signaturit";
-import { getMedia, uploadMedia } from "../service/aws";
+import { getDoc, getImage, uploadDoc, uploadImage } from "../service/aws";
 const mangopay = new mangopayInstance({
   clientId: process.env.CLIENT_ID_MANGOPAY as string,
   clientApiKey: process.env.API_KEY_MANGOPAY as string,
@@ -121,8 +121,20 @@ export const crearNotaConvertible = async (req: Request, res: Response) => {
           },
         });
         medias.push(saveMedia);
-        let data = Buffer.from(med.base64, "base64");
-        await uploadMedia(data, path);
+        let data;
+        if (med.type == "IMAGE") {
+          data = Buffer.from(
+            med.base64.replace(/^data:image\/(png|jpg|jpeg);base64,/, ""),
+            "base64"
+          );
+          await uploadImage(data, path);
+        } else {
+          data = Buffer.from(
+            med.base64.replace(/^data:application\/(pdf);base64,/, ""),
+            "base64"
+          );
+          await uploadDoc(data, path);
+        }
       }
     }
     res.json(nota);
@@ -778,13 +790,13 @@ export const verNotasConvertibles = async (req: Request, res: Response) => {
           img.push({
             id: med.id,
             type: med.type,
-            path: await getMedia(med.path),
+            path: await getImage(med.path),
           });
         } else if (med.type == "DOC") {
           docs.push({
             id: med.id,
             type: med.type,
-            path: await getMedia(med.path),
+            path: await getDoc(med.path),
           });
         }
       }

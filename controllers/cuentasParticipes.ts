@@ -10,7 +10,7 @@ import {
 } from "../service/signaturit";
 //@ts-ignore
 import SignaturitClient from "signaturit-sdk";
-import { getMedia, uploadMedia } from "../service/aws";
+import { getDoc, getImage, uploadDoc, uploadImage } from "../service/aws";
 const API_KEY = process.env.SIGNATURITKEY;
 const ENV = process.env.ENV;
 
@@ -124,9 +124,9 @@ export const crearCuentaParticipe = async (req: Request, res: Response) => {
     let medias = [];
     if (media) {
       for (let med of media) {
-        let path = `media_${cuenta.nombre_del_proyecto}_${med.type}_${
-          cuenta.id
-        }_${cuenta.countMedia ? cuenta.countMedia + 1 : 1}`;
+        let path = `media_${cuenta.nombre_del_proyecto.replace(/\s/g, "_")}_${
+          med.type
+        }_${cuenta.id}_${cuenta.countMedia ? cuenta.countMedia + 1 : 1}`;
         cuenta = await prisma.cuentas_participes.update({
           where: { id: cuenta.id },
           data: { countMedia: cuenta.countMedia ? cuenta.countMedia + 1 : 1 },
@@ -139,8 +139,20 @@ export const crearCuentaParticipe = async (req: Request, res: Response) => {
           },
         });
         medias.push(saveMedia);
-        let data = Buffer.from(med.base64, "base64");
-        await uploadMedia(data, path);
+        let data;
+        if (med.type == "IMAGE") {
+          data = Buffer.from(
+            med.base64.replace(/^data:image\/(png|jpg|jpeg);base64,/, ""),
+            "base64"
+          );
+          await uploadImage(data, path);
+        } else {
+          data = Buffer.from(
+            med.base64.replace(/^data:application\/(pdf);base64,/, ""),
+            "base64"
+          );
+          await uploadDoc(data, path);
+        }
       }
     }
 
@@ -442,13 +454,13 @@ export const verCuentasParticipes = async (req: Request, res: Response) => {
           img.push({
             id: med.id,
             type: med.type,
-            path: await getMedia(med.path),
+            path: await getImage(med.path),
           });
         } else if (med.type == "DOC") {
           docs.push({
             id: med.id,
             type: med.type,
-            path: await getMedia(med.path),
+            path: await getDoc(med.path),
           });
         }
       }
