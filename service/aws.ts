@@ -30,7 +30,7 @@ export const uploadMedia = async (key: ArrayBuffer, ruta: string) => {
   });
 };
 // Obtener una imagen
-export const getImage = async (key: string) => {
+export const getMedia = async (key: string) => {
   const getObjectParams = {
     Bucket: "fourraces",
     Key: `${key}.jpg`,
@@ -39,7 +39,7 @@ export const getImage = async (key: string) => {
   return imageUrl;
 };
 /// borrar una imagen
-export const deleteImageAWS = async (key: string) => {
+export const deleteMediaAWS = async (key: string) => {
   const params = {
     Bucket: "fourrraces",
     Key: `${key}.jpg`,

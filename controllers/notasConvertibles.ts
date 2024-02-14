@@ -8,6 +8,7 @@ import {
   createDocNotaConvertible,
   isCompleted,
 } from "../service/signaturit";
+import { getMedia, uploadMedia } from "../service/aws";
 const mangopay = new mangopayInstance({
   clientId: process.env.CLIENT_ID_MANGOPAY as string,
   clientApiKey: process.env.API_KEY_MANGOPAY as string,
@@ -33,6 +34,7 @@ export const crearNotaConvertible = async (req: Request, res: Response) => {
       floor,
       fecha_devolucion,
       negociar,
+      media,
     } = req.body;
     let user;
     try {
@@ -78,7 +80,7 @@ export const crearNotaConvertible = async (req: Request, res: Response) => {
         .json({ error: "No hay datos de mangopay suficientes" });
 
     /// validar que la empresa tenga mangopay ID
-    const nota = await crearVentaNotaConvertible(
+    let nota = await crearVentaNotaConvertible(
       {
         cantidad_a_vender,
         ticket_minimo,
@@ -101,6 +103,28 @@ export const crearNotaConvertible = async (req: Request, res: Response) => {
       },
       prisma
     );
+    let medias = [];
+    if (media && nota) {
+      for (let med of media) {
+        let path = `media_notaconvertible_${med.type}_${nota.id}_${
+          nota.countMedia ? nota.countMedia + 1 : 1
+        }`;
+        nota = await prisma.venta_de_notas_convertibles.update({
+          where: { id: nota.id },
+          data: { countMedia: nota.countMedia ? nota.countMedia + 1 : 1 },
+        });
+        let saveMedia = await prisma.mediaNC.create({
+          data: {
+            venta_nota_convertible_id: nota.id,
+            path,
+            type: med.type,
+          },
+        });
+        medias.push(saveMedia);
+        let data = Buffer.from(med.base64, "base64");
+        await uploadMedia(data, path);
+      }
+    }
     res.json(nota);
   } catch (e) {
     console.log(e);
@@ -744,8 +768,30 @@ export const verNotasConvertibles = async (req: Request, res: Response) => {
     let notas_convertibles: any[] = [];
 
     for (let venta of ventas) {
+      let medias = await prisma.mediaNC.findMany({
+        where: { venta_nota_convertible_id: venta.id },
+      });
+      let img = [];
+      let docs = [];
+      for (let med of medias) {
+        if (med.type == "IMAGE") {
+          img.push({
+            id: med.id,
+            type: med.type,
+            path: await getMedia(med.path),
+          });
+        } else if (med.type == "DOC") {
+          docs.push({
+            id: med.id,
+            type: med.type,
+            path: await getMedia(med.path),
+          });
+        }
+      }
       notas_convertibles.push({
         venta,
+        img,
+        docs,
       });
     }
 

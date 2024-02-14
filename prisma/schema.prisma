@@ -1344,8 +1344,8 @@ model cuentas_participes {
   creator_id          Int
   nombre_del_proyecto String
   descripcion         String
-  cantidad_a_vender   Int
-  cantidad_restante   Int
+  cantidad_a_vender   Float
+  cantidad_restante   Float
   ticket_minimo       Float
   cesion              Boolean
   duracion            DateTime
@@ -1356,7 +1356,7 @@ model cuentas_participes {
   mangopay_transfers  mangopay_mangopaytransfer_cuenta_participe[]
   users_user          users_user                                   @relation(fields: [creator_id], references: [id])
   paticipacion        participacion[]
-  media               media[]
+  media               mediaCP[]
 }
 
 model orders {
@@ -1466,7 +1466,9 @@ model venta_de_notas_convertibles {
   floor             String?
   fecha_devolucion  DateTime?
   negociar          Boolean?
+    countMedia  Int?
   user              users_user     @relation(fields: [creador_id], references: [id])
+  mediaNC           mediaNC[]
 }
 
 model nota_convertible {
@@ -1491,12 +1493,20 @@ model nota_convertible {
   user               users_user    @relation(fields: [owner_id], references: [id])
 }
 
-model media {
+model mediaCP {
   id                  Int                @id @default(autoincrement())
   cuenta_participe_id Int
   path                String
   type                TypeOfMedia
   cuenta_participe    cuentas_participes @relation(fields: [cuenta_participe_id], references: [id])
+}
+
+model mediaNC {
+  id                        Int                         @id @default(autoincrement())
+  venta_nota_convertible_id Int
+  path                      String
+  type                      TypeOfMedia
+  nota_convertible          venta_de_notas_convertibles @relation(fields: [venta_nota_convertible_id], references: [id])
 }
 
 enum StatusOrderCtaParticipe {
@@ -1522,5 +1532,4 @@ enum Tipodeinteres {
 enum TypeOfMedia {
   IMAGE
   DOC
-  LINK
 }

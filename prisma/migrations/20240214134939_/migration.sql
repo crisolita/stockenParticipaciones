@@ -1,3 +1,15 @@
+-- CreateEnum
+CREATE TYPE "StatusOrderCtaParticipe" AS ENUM ('VENTA_ACTIVA', 'SALDO_BLOQUEADO', 'PENDIENTE_FIRMA', 'COMPRA_TERMINADA', 'RECHAZADA');
+
+-- CreateEnum
+CREATE TYPE "StatusActivo" AS ENUM ('ACTIVO', 'FINALIZADO', 'CANCELADO');
+
+-- CreateEnum
+CREATE TYPE "Tipodeinteres" AS ENUM ('FIJO', 'VARIABLE', 'COMPUESTO');
+
+-- CreateEnum
+CREATE TYPE "TypeOfMedia" AS ENUM ('IMAGE', 'DOC');
+
 -- CreateTable
 CREATE TABLE "auth_group" (
     "id" SERIAL NOT NULL,
@@ -1030,6 +1042,192 @@ CREATE TABLE "votes_vote" (
     CONSTRAINT "votes_vote_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "cuentas_participes" (
+    "id" SERIAL NOT NULL,
+    "creator_id" INTEGER NOT NULL,
+    "nombre_del_proyecto" TEXT NOT NULL,
+    "descripcion" TEXT NOT NULL,
+    "cantidad_a_vender" DOUBLE PRECISION NOT NULL,
+    "cantidad_restante" DOUBLE PRECISION NOT NULL,
+    "ticket_minimo" DOUBLE PRECISION NOT NULL,
+    "cesion" BOOLEAN NOT NULL,
+    "duracion" TIMESTAMP(3) NOT NULL,
+    "fecha_lanzamiento" TIMESTAMP(3) NOT NULL,
+    "companyIDSeller" INTEGER NOT NULL,
+    "clausulas" TEXT,
+    "countMedia" INTEGER,
+
+    CONSTRAINT "cuentas_participes_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "orders" (
+    "id" SERIAL NOT NULL,
+    "aportacion" DOUBLE PRECISION NOT NULL,
+    "documentId_first" TEXT,
+    "documentId_second" TEXT,
+    "signatureId" TEXT,
+    "cuenta_participe_id" INTEGER NOT NULL,
+    "buyerID" INTEGER,
+    "sellerID" INTEGER NOT NULL,
+    "bloqueo_id" INTEGER,
+    "companyIdSeller" INTEGER,
+    "status" "StatusOrderCtaParticipe" NOT NULL,
+    "companyIdBuyer" INTEGER,
+    "create_date" TIMESTAMP(3) NOT NULL,
+    "complete_at" TIMESTAMP(3),
+    "participacion_id" INTEGER,
+
+    CONSTRAINT "orders_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "orderNotaConvertible" (
+    "id" SERIAL NOT NULL,
+    "nota_convertible_id" INTEGER,
+    "aportacion" DOUBLE PRECISION NOT NULL,
+    "venta_nc_id" INTEGER,
+    "signature_id" TEXT,
+    "document_id_first" TEXT,
+    "document_id_second" TEXT,
+    "create_date" TIMESTAMP(3) NOT NULL,
+    "complete_at" TIMESTAMP(3),
+    "sellerId" INTEGER NOT NULL,
+    "companyIdBuyer" INTEGER,
+    "buyerId" INTEGER,
+    "bloqueo_id" INTEGER,
+    "status" "StatusOrderCtaParticipe" NOT NULL,
+
+    CONSTRAINT "orderNotaConvertible_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "participacion" (
+    "id" SERIAL NOT NULL,
+    "cuenta_participe_id" INTEGER NOT NULL,
+    "aportacion" DOUBLE PRECISION NOT NULL,
+    "document_id_first" TEXT NOT NULL,
+    "document_id_second" TEXT NOT NULL,
+    "owner_id" INTEGER NOT NULL,
+    "signature_id" TEXT NOT NULL,
+    "buy_date" TIMESTAMP(3) NOT NULL,
+    "cesion_is_allowed" BOOLEAN,
+    "status" "StatusActivo",
+
+    CONSTRAINT "participacion_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "mangopay_basemangopaytransaction_cuenta_participe" (
+    "id" SERIAL NOT NULL,
+    "created" TIMESTAMPTZ(6) NOT NULL,
+    "modified" TIMESTAMPTZ(6) NOT NULL,
+    "transaction_id" VARCHAR(32) NOT NULL,
+    "status" VARCHAR(32) NOT NULL,
+    "amount" DECIMAL(20,2) NOT NULL,
+    "currency" VARCHAR(3) NOT NULL,
+    "fees" DECIMAL(20,2) NOT NULL,
+    "cod" VARCHAR(30) NOT NULL,
+
+    CONSTRAINT "mangopay_basemangopaytransaction_cuenta_participe_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "mangopay_mangopaytransfer_cuenta_participe" (
+    "from_user_id" INTEGER NOT NULL,
+    "to_user_id" INTEGER NOT NULL,
+    "basemangopaytransaction_ptr_id" INTEGER NOT NULL,
+    "from_cod" VARCHAR(255),
+    "to_cod" VARCHAR(255),
+    "total_amount" DECIMAL(20,2),
+    "cuenta_participe_id" INTEGER NOT NULL,
+
+    CONSTRAINT "mangopay_mangopaytransfer_cuenta_participe_pkey" PRIMARY KEY ("basemangopaytransaction_ptr_id")
+);
+
+-- CreateTable
+CREATE TABLE "record_participaciones" (
+    "id" SERIAL NOT NULL,
+    "participacion_id" INTEGER NOT NULL,
+    "aportacion" DOUBLE PRECISION NOT NULL,
+    "old_document_id_first" TEXT NOT NULL,
+    "old_document_second" TEXT NOT NULL,
+    "old_signature_id" TEXT NOT NULL,
+    "old_owner_id" INTEGER NOT NULL,
+    "change_date" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "record_participaciones_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "venta_de_notas_convertibles" (
+    "id" SERIAL NOT NULL,
+    "cantidad_a_vender" DOUBLE PRECISION NOT NULL,
+    "cantidad_restante" DOUBLE PRECISION NOT NULL,
+    "ticket_minimo" DOUBLE PRECISION NOT NULL,
+    "creador_id" INTEGER NOT NULL,
+    "companyID" INTEGER NOT NULL,
+    "interes_fijo" DOUBLE PRECISION,
+    "interes_variable" DOUBLE PRECISION,
+    "tipodeinteres" "Tipodeinteres",
+    "vence_date" TIMESTAMP(3),
+    "vence_cantidad" INTEGER,
+    "tasa_descuento" DOUBLE PRECISION,
+    "capitulacion" TEXT,
+    "CAP_no_ronda" TEXT,
+    "floor" TEXT,
+    "fecha_devolucion" TIMESTAMP(3),
+    "negociar" BOOLEAN,
+
+    CONSTRAINT "venta_de_notas_convertibles_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "nota_convertible" (
+    "id" SERIAL NOT NULL,
+    "valor" DOUBLE PRECISION NOT NULL,
+    "venta_nc_id" INTEGER,
+    "document_id_first" TEXT,
+    "document_id_second" TEXT,
+    "signature_id" TEXT,
+    "buy_date" TIMESTAMP(3) NOT NULL,
+    "interes_fijo" DOUBLE PRECISION,
+    "interes_variable" DOUBLE PRECISION,
+    "vence_date" TIMESTAMP(3),
+    "tasa_descuento" DOUBLE PRECISION,
+    "capitulacion" TEXT,
+    "CAP_no_ronda" TEXT,
+    "floor" TEXT,
+    "fecha_devolucion" TIMESTAMP(3),
+    "negociar" BOOLEAN,
+    "owner_id" INTEGER NOT NULL,
+    "countMedia" INTEGER,
+    "status" "StatusActivo",
+
+    CONSTRAINT "nota_convertible_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "mediaCP" (
+    "id" SERIAL NOT NULL,
+    "cuenta_participe_id" INTEGER NOT NULL,
+    "path" TEXT NOT NULL,
+    "type" "TypeOfMedia" NOT NULL,
+
+    CONSTRAINT "mediaCP_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "mediaNC" (
+    "id" SERIAL NOT NULL,
+    "venta_nota_convertible_id" INTEGER NOT NULL,
+    "path" TEXT NOT NULL,
+    "type" "TypeOfMedia" NOT NULL,
+
+    CONSTRAINT "mediaNC_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "auth_group_name_key" ON "auth_group"("name");
 
@@ -1911,3 +2109,33 @@ ALTER TABLE "votes_vote" ADD CONSTRAINT "votes_vote_agenda_item_id_2274f311_fk_m
 
 -- AddForeignKey
 ALTER TABLE "votes_vote" ADD CONSTRAINT "votes_vote_content_type_id_c8375fe1_fk_django_content_type_id" FOREIGN KEY ("content_type_id") REFERENCES "django_content_type"("id") ON DELETE NO ACTION ON UPDATE NO ACTION;
+
+-- AddForeignKey
+ALTER TABLE "cuentas_participes" ADD CONSTRAINT "cuentas_participes_creator_id_fkey" FOREIGN KEY ("creator_id") REFERENCES "users_user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "participacion" ADD CONSTRAINT "participacion_owner_id_fkey" FOREIGN KEY ("owner_id") REFERENCES "users_user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "participacion" ADD CONSTRAINT "participacion_cuenta_participe_id_fkey" FOREIGN KEY ("cuenta_participe_id") REFERENCES "cuentas_participes"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "mangopay_mangopaytransfer_cuenta_participe" ADD CONSTRAINT "mangopay_mangopaytransfer_cuenta_participe_cuenta_particip_fkey" FOREIGN KEY ("cuenta_participe_id") REFERENCES "cuentas_participes"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "mangopay_mangopaytransfer_cuenta_participe" ADD CONSTRAINT "mangopay_mangopaytra_basemangopaytransact_d76323ba_fk_mangopay_" FOREIGN KEY ("basemangopaytransaction_ptr_id") REFERENCES "mangopay_basemangopaytransaction_cuenta_participe"("id") ON DELETE NO ACTION ON UPDATE NO ACTION;
+
+-- AddForeignKey
+ALTER TABLE "record_participaciones" ADD CONSTRAINT "record_participaciones_participacion_id_fkey" FOREIGN KEY ("participacion_id") REFERENCES "participacion"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "venta_de_notas_convertibles" ADD CONSTRAINT "venta_de_notas_convertibles_creador_id_fkey" FOREIGN KEY ("creador_id") REFERENCES "users_user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "nota_convertible" ADD CONSTRAINT "nota_convertible_owner_id_fkey" FOREIGN KEY ("owner_id") REFERENCES "users_user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "mediaCP" ADD CONSTRAINT "mediaCP_cuenta_participe_id_fkey" FOREIGN KEY ("cuenta_participe_id") REFERENCES "cuentas_participes"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "mediaNC" ADD CONSTRAINT "mediaNC_venta_nota_convertible_id_fkey" FOREIGN KEY ("venta_nota_convertible_id") REFERENCES "venta_de_notas_convertibles"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

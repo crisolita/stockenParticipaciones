@@ -10,7 +10,7 @@ import {
 } from "../service/signaturit";
 //@ts-ignore
 import SignaturitClient from "signaturit-sdk";
-import { uploadMedia } from "../service/aws";
+import { getMedia, uploadMedia } from "../service/aws";
 const API_KEY = process.env.SIGNATURITKEY;
 const ENV = process.env.ENV;
 
@@ -131,7 +131,7 @@ export const crearCuentaParticipe = async (req: Request, res: Response) => {
           where: { id: cuenta.id },
           data: { countMedia: cuenta.countMedia ? cuenta.countMedia + 1 : 1 },
         });
-        let saveMedia = await prisma.media.create({
+        let saveMedia = await prisma.mediaCP.create({
           data: {
             cuenta_participe_id: cuenta.id,
             path,
@@ -432,6 +432,26 @@ export const verCuentasParticipes = async (req: Request, res: Response) => {
       for (let reventa of reventas) {
         if (reventa.cuenta_participe_id == cuenta.id) revende = reventa;
       }
+      let medias = await prisma.mediaCP.findMany({
+        where: { cuenta_participe_id: cuenta.id },
+      });
+      let img = [];
+      let docs = [];
+      for (let med of medias) {
+        if (med.type == "IMAGE") {
+          img.push({
+            id: med.id,
+            type: med.type,
+            path: await getMedia(med.path),
+          });
+        } else if (med.type == "DOC") {
+          docs.push({
+            id: med.id,
+            type: med.type,
+            path: await getMedia(med.path),
+          });
+        }
+      }
       cuentas_participes.push({
         id: cuenta.id,
         creator_id: cuenta.creator_id,
@@ -446,6 +466,8 @@ export const verCuentasParticipes = async (req: Request, res: Response) => {
         companyIDSeller: cuenta.companyIDSeller,
         clausulas: cuenta.clausulas,
         reventas: revende,
+        docs,
+        img,
       });
     }
 
