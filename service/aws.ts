@@ -32,7 +32,7 @@ export const uploadMedia = async (key: ArrayBuffer, ruta: string) => {
 // Obtener una imagen
 export const getMedia = async (key: string) => {
   const getObjectParams = {
-    Bucket: "fourraces",
+    Bucket: "blockimpulse-bucket-for-objects-uploading",
     Key: `${key}.jpg`,
   };
   const imageUrl = s3.getSignedUrl("getObject", getObjectParams);
@@ -41,7 +41,7 @@ export const getMedia = async (key: string) => {
 /// borrar una imagen
 export const deleteMediaAWS = async (key: string) => {
   const params = {
-    Bucket: "fourrraces",
+    Bucket: "blockimpulse-bucket-for-objects-uploading",
     Key: `${key}.jpg`,
   };
 
