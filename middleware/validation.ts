@@ -87,6 +87,12 @@ export const querySchemaCrearVentaNC = Joi.object({
   capitulacion: Joi.string(),
   CAP_no_ronda: Joi.string(),
   floor: Joi.string(),
+  media: Joi.array().items(
+    Joi.object({
+      type: Joi.string().required(),
+      base64: Joi.string().required(),
+    })
+  ),
   fecha_devolucion: Joi.string(),
   negociar: Joi.boolean(),
 });
