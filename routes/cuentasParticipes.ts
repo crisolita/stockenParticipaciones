@@ -7,6 +7,7 @@ import {
   comprarParticipacionPorOrden,
   crearCuentaParticipe,
   crearVentaDeParticipacion,
+  editarCtaParticipe,
   prueba_del_doc,
   rechazarComprasCuentaParticipe,
   signCompraDoc,
@@ -51,7 +52,7 @@ router.post(
   rechazarComprasCuentaParticipe
 );
 router.post("/signDoc", validator.body(querySchemaSignDocCP), signCompraDoc);
-
+router.post("/editarCuenta", editarCtaParticipe);
 router.post(
   "/verOrdenesBySell",
   validator.body(querySchemaVerOrdenesSell),

@@ -128,3 +128,9 @@ function isValidHTML(html: any) {
   const htmlRegex = /<[a-z][\s\S]*>/i; // Expresión regular simple para verificar si hay etiquetas HTML
   return htmlRegex.test(html);
 }
+
+export const querySchemaEditarCta = Joi.object({
+  jwtCreador: Joi.string().required(),
+  cuenta_participe_id: Joi.number().required(),
+  cesion: Joi.boolean(),
+});
