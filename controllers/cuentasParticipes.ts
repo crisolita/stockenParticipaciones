@@ -240,9 +240,6 @@ export const comprarParticipacion = async (req: Request, res: Response) => {
           error: "Empresa no es del usuario o con datos de empresa faltante",
         });
     } else {
-      const fiscalresidence = await prisma.users_fiscalresidence.findFirst({
-        where: { user_id: user.data.id },
-      });
       console.log(user.data);
       console.log(
         !user.data.first_name ||
@@ -301,7 +298,6 @@ export const comprarParticipacion = async (req: Request, res: Response) => {
         companyIdSeller: cuenta_participe.companyIDSeller,
       },
     });
-
     try {
       console.log("Hola");
       const document = await createSignature(
@@ -312,6 +308,10 @@ export const comprarParticipacion = async (req: Request, res: Response) => {
         company,
         prisma
       );
+
+      console.log("doc", document);
+      if (!document || !document.id)
+        return res.status(500).json({ error: "Error al crear documento" });
       order = await prisma.orders.update({
         where: { id: order.id },
         data: {
@@ -321,9 +321,6 @@ export const comprarParticipacion = async (req: Request, res: Response) => {
           status: "PENDIENTE_FIRMA",
         },
       });
-      console.log("doc", document);
-      if (!document || !document.id)
-        return res.status(500).json({ error: "Error al crear documento" });
     } catch (e) {
       console.log(e);
       return res.status(400).json(e);
