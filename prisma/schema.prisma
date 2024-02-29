@@ -1488,6 +1488,7 @@ model nota_convertible {
   floor              String?
   fecha_devolucion   DateTime?
   negociar           Boolean?
+  clausulas          String?
   owner_id           Int
   status             StatusActivo?
   user               users_user    @relation(fields: [owner_id], references: [id])
