@@ -267,23 +267,23 @@ export const comprarParticipacion = async (req: Request, res: Response) => {
       return res
         .status(404)
         .json({ error: "Creador o compania no encontrado" });
-    // if (funds.data.funds < aportacion)
-    //   return res.status(400).json({ error: "Fondo insuficiente" });
-    // // /bloquear saldo
-    // const bloqueoSaldo = await axios.post(
-    //   "https://pro.stockencapital.com/api/v1/moneyblocks/create_money_block/",
-    //   {
-    //     blocked_amount: aportacion,
-    //     user_cod: user.data.cod,
-    //     company_cod: company?.cod,
-    //     status: "PROCESSING",
-    //   },
-    //   {
-    //     headers: {
-    //       Authorization: `${jwtUser}`,
-    //     },
-    //   }
-    // );
+    if (funds.data.funds < aportacion)
+      return res.status(400).json({ error: "Fondo insuficiente" });
+    // /bloquear saldo
+    const bloqueoSaldo = await axios.post(
+      "https://pro.stockencapital.com/api/v1/moneyblocks/create_money_block/",
+      {
+        blocked_amount: aportacion,
+        user_cod: user.data.cod,
+        company_cod: company?.cod,
+        status: "PROCESSING",
+      },
+      {
+        headers: {
+          Authorization: `${jwtUser}`,
+        },
+      }
+    );
 
     let order = await prisma.orders.create({
       data: {
@@ -292,7 +292,7 @@ export const comprarParticipacion = async (req: Request, res: Response) => {
         sellerID: cuenta_participe.creator_id,
         buyerID: user.data.id,
         status: "SALDO_BLOQUEADO",
-        bloqueo_id: 1,
+        bloqueo_id: bloqueoSaldo.data.id,
         companyIdBuyer: companyIdBuyer ? companyIdBuyer : null,
         create_date: new Date(),
         companyIdSeller: cuenta_participe.companyIDSeller,
