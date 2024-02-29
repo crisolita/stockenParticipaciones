@@ -247,8 +247,6 @@ export const comprarParticipacion = async (req: Request, res: Response) => {
       if (
         !user.data.first_name ||
         !user.data.last_name ||
-        !user.data.marital_status ||
-        !user.data.profession ||
         !user.data.id_document_number ||
         !fiscalresidence
       )
@@ -1179,8 +1177,6 @@ export const comprarParticipacionPorOrden = async (
     if (
       !user.data.first_name ||
       !user.data.last_name ||
-      !user.data.marital_status ||
-      !user.data.profession ||
       !user.data.id_document_number ||
       !fiscalresidence
     )
