@@ -1022,7 +1022,10 @@ export const crearVentaDeParticipacion = async (
       return res
         .status(400)
         .json({ error: "Participacion no pertenece al usuario" });
-    if (!participacion.cesion_is_allowed)
+    const cuenta_participe = await prisma.cuentas_participes.findUnique({
+      where: { id: participacion.cuenta_participe_id },
+    });
+    if (!cuenta_participe?.cesion)
       return res
         .status(400)
         .json({ error: "Participacion no puede ser vendida" });
@@ -1398,6 +1401,53 @@ export const borrarCtaParticipe = async (req: Request, res: Response) => {
     const cuenta = await prisma.cuentas_participes.delete({
       where: {
         id: cuenta_participe_id,
+      },
+    });
+
+    res.json(cuenta);
+  } catch (e) {
+    console.log(e);
+    res.status(500).json(e);
+  }
+};
+//// nuevo borrar cta participe
+export const editarCtaParticipe = async (req: Request, res: Response) => {
+  try {
+    // @ts-ignore
+    const prisma = req.prisma as PrismaClient;
+    const { jwtCreador, cuenta_participe_id, cesion } = req.body;
+    let user;
+    try {
+      user = await axios.get(
+        "https://pro.stockencapital.com/api/v1/users/me/",
+        {
+          headers: {
+            Authorization: `${jwtCreador}`,
+          },
+        }
+      );
+      console.log(user.data);
+      if (!user || user.data.status != "validated")
+        return res.status(400).json({ error: "Usuario no valido" });
+    } catch (e) {
+      console.log(e);
+      return res.status(500).json({ error: "Error al validar usuario" });
+    }
+    let cuenta = await prisma.cuentas_participes.findFirst({
+      where: {
+        id: cuenta_participe_id,
+      },
+    });
+    if (!cuenta?.creator_id != user.data.id)
+      return res
+        .status(400)
+        .json({ error: "Usuario no es creador de la cuenta" });
+    cuenta = await prisma.cuentas_participes.update({
+      where: {
+        id: cuenta_participe_id,
+      },
+      data: {
+        cesion,
       },
     });
 
