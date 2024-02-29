@@ -243,12 +243,18 @@ export const comprarParticipacion = async (req: Request, res: Response) => {
       const fiscalresidence = await prisma.users_fiscalresidence.findFirst({
         where: { user_id: user.data.id },
       });
-
+      console.log(user.data);
+      console.log(
+        !user.data.first_name ||
+          !user.data.last_name ||
+          !user.data.id_document_number ||
+          !user.data.fiscal_residence
+      );
       if (
         !user.data.first_name ||
         !user.data.last_name ||
         !user.data.id_document_number ||
-        !fiscalresidence
+        !user.data.fiscal_residence
       )
         return res
           .status(400)
@@ -1174,6 +1180,7 @@ export const comprarParticipacionPorOrden = async (
     if (!participacion)
       return res.status(404).json({ error: "Participacion no encontrada" });
     if (!cuenta) return res.status(404).json({ error: "Cuenta no encontrada" });
+    console.log(user.data);
     if (
       !user.data.first_name ||
       !user.data.last_name ||
