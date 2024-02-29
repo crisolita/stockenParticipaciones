@@ -267,23 +267,23 @@ export const comprarParticipacion = async (req: Request, res: Response) => {
       return res
         .status(404)
         .json({ error: "Creador o compania no encontrado" });
-    if (funds.data.funds < aportacion)
-      return res.status(400).json({ error: "Fondo insuficiente" });
-    // /bloquear saldo
-    const bloqueoSaldo = await axios.post(
-      "https://pro.stockencapital.com/api/v1/moneyblocks/create_money_block/",
-      {
-        blocked_amount: aportacion,
-        user_cod: user.data.cod,
-        company_cod: company?.cod,
-        status: "PROCESSING",
-      },
-      {
-        headers: {
-          Authorization: `${jwtUser}`,
-        },
-      }
-    );
+    // if (funds.data.funds < aportacion)
+    //   return res.status(400).json({ error: "Fondo insuficiente" });
+    // // /bloquear saldo
+    // const bloqueoSaldo = await axios.post(
+    //   "https://pro.stockencapital.com/api/v1/moneyblocks/create_money_block/",
+    //   {
+    //     blocked_amount: aportacion,
+    //     user_cod: user.data.cod,
+    //     company_cod: company?.cod,
+    //     status: "PROCESSING",
+    //   },
+    //   {
+    //     headers: {
+    //       Authorization: `${jwtUser}`,
+    //     },
+    //   }
+    // );
 
     let order = await prisma.orders.create({
       data: {
@@ -292,12 +292,13 @@ export const comprarParticipacion = async (req: Request, res: Response) => {
         sellerID: cuenta_participe.creator_id,
         buyerID: user.data.id,
         status: "SALDO_BLOQUEADO",
-        bloqueo_id: bloqueoSaldo.data.id,
+        bloqueo_id: 1,
         companyIdBuyer: companyIdBuyer ? companyIdBuyer : null,
         create_date: new Date(),
         companyIdSeller: cuenta_participe.companyIDSeller,
       },
     });
+
     try {
       console.log("Hola");
       const document = await createSignature(
@@ -308,10 +309,6 @@ export const comprarParticipacion = async (req: Request, res: Response) => {
         company,
         prisma
       );
-
-      console.log("doc", document);
-      if (!document || !document.id)
-        return res.status(500).json({ error: "Error al crear documento" });
       order = await prisma.orders.update({
         where: { id: order.id },
         data: {
@@ -321,6 +318,9 @@ export const comprarParticipacion = async (req: Request, res: Response) => {
           status: "PENDIENTE_FIRMA",
         },
       });
+      console.log("doc", document);
+      if (!document || !document.id)
+        return res.status(500).json({ error: "Error al crear documento" });
     } catch (e) {
       console.log(e);
       return res.status(400).json(e);
