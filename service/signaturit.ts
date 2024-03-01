@@ -393,6 +393,12 @@ export const createDocNotaConvertible = async (
         where: { id: order.companyIdBuyer },
       });
     }
+
+    ///meter aqui euros dentro de clausulas
+    let clausulas = venta.clausulas;
+    clausulas = mustache.render(clausulas ? clausulas : "", {
+      aporte: order.aportacion,
+    });
     const data = {
       Document_date: new Date().toLocaleDateString("es-Es"),
       Empresa_name: companySeller.social_denomination,
@@ -406,26 +412,7 @@ export const createDocNotaConvertible = async (
         ? textoClienteEmpresa(buyer, companySeller)
         : textoClientePersona(buyer, fiscalresidenceBuyer),
       Client_aporte: order.aportacion,
-      intereses: interes(
-        venta.tipodeinteres,
-        venta.interes_fijo ? venta.interes_fijo : 0,
-        venta.interes_variable ? venta.interes_variable : 0
-      ),
-      fecha_vencimiento: new Date(venta.vence_date ? venta.vence_date : ""),
-      importe_ronda_letra: venta.capitulacion,
-      importe_cap_no_ronda: venta.CAP_no_ronda,
-      Amortizacion: amortizacion(
-        venta.tasa_descuento ? true : false,
-        venta.capitulacion ? venta.capitulacion : "0",
-        venta.tasa_descuento
-      ),
-      floor: venta.floor ? floor(venta.floor, Number(venta.floor)) : "",
-      Devolucion: devolucion(
-        venta.fecha_devolucion ? true : false,
-        new Date(
-          venta.fecha_devolucion ? venta.fecha_devolucion : ""
-        ).getMonth()
-      ),
+      clausulas,
     };
     // Ajusta las opciones según tus necesidades
     fs.writeFileSync(

@@ -1467,6 +1467,7 @@ model venta_de_notas_convertibles {
   fecha_devolucion  DateTime?
   negociar          Boolean?
     countMedia  Int?
+    clausulas          String?
   user              users_user     @relation(fields: [creador_id], references: [id])
   mediaNC           mediaNC[]
 }
@@ -1488,7 +1489,6 @@ model nota_convertible {
   floor              String?
   fecha_devolucion   DateTime?
   negociar           Boolean?
-  clausulas          String?
   owner_id           Int
   status             StatusActivo?
   user               users_user    @relation(fields: [owner_id], references: [id])

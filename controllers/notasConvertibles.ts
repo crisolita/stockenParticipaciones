@@ -35,6 +35,7 @@ export const crearNotaConvertible = async (req: Request, res: Response) => {
       fecha_devolucion,
       negociar,
       media,
+      clausulas,
     } = req.body;
     let user;
     try {
@@ -100,6 +101,7 @@ export const crearNotaConvertible = async (req: Request, res: Response) => {
         negociar,
         creador_id: user.data.id,
         cantidad_restante: cantidad_a_vender,
+        clausulas,
       },
       prisma
     );
@@ -406,7 +408,7 @@ export const aceptarCompraNotaConvertible = async (
     if (!user || user.data.status != "validated")
       return res.status(400).json({ error: "Usuario no valido" });
     let order = await prisma.orderNotaConvertible.findUnique({
-      where: { id: orderId, status: "PENDIENTE_FIRMA" },
+      where: { id: orderId, status: "SALDO_BLOQUEADO" },
     });
     if (
       !order ||
@@ -663,7 +665,7 @@ export const signCompraDoc = async (req: Request, res: Response) => {
       data: {
         complete_at: new Date(),
         nota_convertible_id: nota.id,
-        status: "COMPRA_TERMINADA",
+        status: "SALDO_BLOQUEADO",
       },
     });
     res.json({ order, nota });

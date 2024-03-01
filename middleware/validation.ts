@@ -95,6 +95,15 @@ export const querySchemaCrearVentaNC = Joi.object({
   ),
   fecha_devolucion: Joi.string(),
   negociar: Joi.boolean(),
+  clausulas: Joi.custom((value, helpers) => {
+    // Aquí puedes implementar la lógica para validar el HTML
+    // Por ejemplo, podrías utilizar una expresión regular para verificar si es HTML válido
+    if (isValidHTML(value)) {
+      return value;
+    } else {
+      return helpers.error("HTML.invalid");
+    }
+  }, "Custom HTML Validation"),
 });
 export const querySchemaComprarNC = Joi.object({
   venta_id: Joi.number().required(),
