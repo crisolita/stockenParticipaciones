@@ -11,6 +11,8 @@ import {
 //@ts-ignore
 import SignaturitClient from "signaturit-sdk";
 import { getDoc, getImage, uploadDoc, uploadImage } from "../service/aws";
+import sanitizeHtml from "sanitize-html";
+
 const API_KEY = process.env.SIGNATURITKEY;
 const ENV = process.env.ENV;
 
@@ -67,6 +69,18 @@ export const crearCuentaParticipe = async (req: Request, res: Response) => {
       return res.status(400).json({
         error: "Compañia no existe, no pertenece al usuario o no esta validada",
       });
+
+    //sanitizar HTML
+
+    const cleanHtml = sanitizeHtml(Clausulas, {
+      allowedTags: ["p", "a"], // Etiquetas permitidas
+      allowedAttributes: {
+        a: ["href"], // Atributos permitidos por etiqueta
+      },
+      disallowedTagsMode: "discard",
+    });
+
+    console.log(cleanHtml);
 
     /// lo que falte de empresa pedirselo al usuario, en el documento?
     const mangopayWallet = await prisma.mangopay_mangopaywallet.findFirst({
@@ -309,6 +323,10 @@ export const comprarParticipacion = async (req: Request, res: Response) => {
         company,
         prisma
       );
+
+      console.log("doc", document);
+      if (!document || !document.id)
+        return res.status(500).json({ error: "Error al crear documento" });
       order = await prisma.orders.update({
         where: { id: order.id },
         data: {
@@ -318,9 +336,6 @@ export const comprarParticipacion = async (req: Request, res: Response) => {
           status: "PENDIENTE_FIRMA",
         },
       });
-      console.log("doc", document);
-      if (!document || !document.id)
-        return res.status(500).json({ error: "Error al crear documento" });
     } catch (e) {
       console.log(e);
       return res.status(400).json(e);
